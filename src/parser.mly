@@ -3,6 +3,8 @@ open Printf
 open Lexing
 
 let var_table = Hashtbl.create 16
+
+let parse_error s = print_endline s
 %}
 
 %token NEWLINE

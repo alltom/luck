@@ -7,10 +7,10 @@ let var_table = Hashtbl.create 16
 let parse_error s = print_endline s
 %}
 
-%token NEWLINE SEMICOLON
+%token SEMICOLON
 %token LPAREN RPAREN EQ AEQ NEQ
 %token COMMA
-%token IF ELSE
+%token IF THEN ELSE
 %token <float> NUM
 %token PLUS MINUS MULTIPLY DIVIDE LT GT CARET
 %token <string> VAR
@@ -24,8 +24,7 @@ let parse_error s = print_endline s
 %left NEG /* negation */
 %right CARET
 
-%nonassoc IFX
-%nonassoc ELSE
+%left ELSE
 
 %start input
 %type <unit> input
@@ -68,8 +67,7 @@ exp:
 | exp GT exp          { if $1 > $3 then 1.0 else 0.0 }
 | exp EQ exp          { if $1 == $3 then 1.0 else 0.0 }
 | exp NEQ exp         { if $1 <> $3 then 1.0 else 0.0 }
-| IF LPAREN exp RPAREN exp %prec IFX { if $3 <> 0.0 then $5 else 0.0 }
-| IF LPAREN exp RPAREN exp ELSE exp { if $3 <> 0.0 then $5 else $7 }
+| IF exp THEN exp ELSE exp { if $2 <> 0.0 then $4 else $6 }
 | LPAREN exp RPAREN   { $2 }
 | exp COMMA exp       { $3 }
 

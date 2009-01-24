@@ -51,6 +51,7 @@ rule token = parse
 | '='                      { AEQ }
 | ','                      { COMMA }
 | "if"                     { IF }
+| "then"                     { THEN }
 | "else"                   { ELSE }
 | ident ident_num* as word { try let f = Hashtbl.find fun_table word in FNCT f with Not_found -> VAR word }
 | _                        { token lexbuf }

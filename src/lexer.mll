@@ -16,6 +16,10 @@ rule token = parse
   [' ' '\t']               { token lexbuf }
 | '\n'                     { incr_lineno lexbuf; token lexbuf }
 | ';'                      { SEMICOLON }
+| "while"                  { WHILE }
+| "if"                     { IF }
+| "then"                   { THEN }
+| "else"                   { ELSE }
 | digit+
 | "." digit+
 | digit+ "." digit* as num { NUM (float_of_string num) }
@@ -34,8 +38,4 @@ rule token = parse
 | '{'                      { LBRACE }
 | '}'                      { RBRACE }
 | ','                      { COMMA }
-| "while"                  { WHILE }
-| "if"                     { IF }
-| "then"                   { THEN }
-| "else"                   { ELSE }
 | eof                      { raise End_of_file }

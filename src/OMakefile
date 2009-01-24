@@ -1,0 +1,43 @@
+# .PHONY: all install clean
+
+# .SUBDIRS:
+
+# USE_OCAMLFIND = true
+#
+# OCAMLPACKS[] =
+#    pack1
+#    pack2
+#
+# if $(not $(OCAMLFIND_EXISTS))
+#    eprintln(This project requires ocamlfind, but is was not found.)
+#    eprintln(You need to install ocamlfind and run "omake --configure".)
+#    exit 1
+
+
+NATIVE_ENABLED = false
+BYTE_ENABLED = true
+
+# OCAMLINCLUDES +=
+# OCAMLFLAGS    +=
+# OCAMLCFLAGS   +=
+# OCAMLOPTFLAGS +=
+# OCAML_LINK_FLAGS +=
+# OCAML_BYTE_LINK_FLAGS +=
+# OCAML_NATIVE_LINK_FLAGS +=
+# OCAML_LIBS +=
+# OCAML_CLIBS +=
+# OCAML_OTHER_LIBS +=
+# OCAML_LIB_FLAGS +=
+
+# Workaround for the fact that ocamldep does not pay attention to .mll
+# and .mly files.
+OCamlGeneratedFiles(parser.ml lexer.ml)
+
+FILES[] =
+   parser
+   lexer
+   link
+
+PROGRAM = link
+
+.DEFAULT: $(OCamlProgram $(PROGRAM), $(FILES))

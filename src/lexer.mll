@@ -42,5 +42,7 @@ rule token = parse
 | ')'                      { RPAREN }
 | '{'                      { LBRACE }
 | '}'                      { RBRACE }
+| '['                      { LBRACK }
+| ']'                      { RBRACK }
 | ','                      { COMMA }
 | eof                      { raise End_of_file }

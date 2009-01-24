@@ -72,8 +72,12 @@ typ:
   ID { $1 }
 ;
 
+paramlist:
+  ID ID { $1 ^ " " ^ $2 }
+| paramlist COMMA ID ID { $1 ^ ", " ^ $3 ^ " " ^ $4 }
+
 func:
-  FUN typ ID LPAREN exp RPAREN block { "fun " ^ $2 ^ " " ^ $3 ^ "(" ^ $5 ^ ")" ^ $7 }
+  FUN typ ID LPAREN paramlist RPAREN block { "fun " ^ $2 ^ " " ^ $3 ^ "(" ^ $5 ^ ")" ^ $7 }
 ;
 
 id_list:

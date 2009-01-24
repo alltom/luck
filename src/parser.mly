@@ -26,6 +26,8 @@ let parse_error s = print_endline s
 %left IFX
 %left ELSE
 %left PRECPAREN
+%left PERIOD
+%left FUNCALL
 
 %start input
 %type <unit> input
@@ -108,24 +110,18 @@ clas:
 | pub CLASS ID extend clasblock { $1 ^ "class " ^ $3 ^ " " ^ $4 ^ " " ^ $5 }
 ;
 
-dotted_id:
-  ID { $1 }
-| dotted_id PERIOD ID { $1 ^ "." ^ $3 }
-;
-
 exp:
   contained_exp   { $1 }
 | uncontained_exp { $1 }
 
 contained_exp:
   NUM                               { string_of_float $1 }
-| dotted_id                         { $1 }
-| LPAREN exp RPAREN PERIOD ID       { "(" ^ $2 ^ ")." ^ $5 }
-| MINUS exp %prec NEG               { "-" ^ $2 }
-| dotted_id LPAREN exp RPAREN       { $1 ^ "(" ^ $3 ^ ")" }
+| ID                                { $1 }
 | LPAREN exp RPAREN %prec PRECPAREN { "(" ^ $2 ^ ")" }
-| LPAREN exp RPAREN LBRACK exp RBRACK { "(" ^ $2 ^ ")[" ^ $5 ^ "]" }
-| ID LBRACK exp RBRACK              { $1 ^ "[" ^ $3 ^ "]" }
+| contained_exp PERIOD ID { $1 ^ "." ^ $3 }
+| MINUS contained_exp %prec NEG               { "-" ^ $2 }
+/*| contained_exp LPAREN exp RPAREN %prec FUNCALL       { $1 ^ "(" ^ $3 ^ ")" }*/
+/*| contained_exp LBRACK exp RBRACK { $1 ^ "[" ^ $3 ^ "]" }*/
 ;
 
 uncontained_exp:

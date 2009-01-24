@@ -2,8 +2,6 @@
 open Printf
 open Lexing
 
-let var_table = Hashtbl.create 16
-
 let parse_error s = print_endline s
 %}
 
@@ -13,8 +11,6 @@ let parse_error s = print_endline s
 %token IF THEN ELSE
 %token <float> NUM
 %token PLUS MINUS MULTIPLY DIVIDE LT GT CARET
-%token <string> VAR
-%token <float->float> FNCT
 
 %left COMMA
 %left EQ NEQ LT GT
@@ -27,48 +23,33 @@ let parse_error s = print_endline s
 %left ELSE
 
 %start input
-%type <unit> input
+%type <unit> input line exp
 
 %%
 
 input:
-             { }
+/* empty */  { }
 | input line { }
 
 line:
   SEMICOLON       { }
-| exp SEMICOLON   { printf "\t%.10g\n" $1; flush stdout }
-| error SEMICOLON { } /* resume at next command on error */
+| exp SEMICOLON   { }
+| error SEMICOLON { }
 
 exp:
-  NUM                 { $1 }
-| VAR                 { try Hashtbl.find var_table $1 with Not_found -> printf "no such variable '%s'\n" $1; 0.0 }
-| VAR AEQ exp         { Hashtbl.replace var_table $1 $3; $3 }
-| FNCT LPAREN exp RPAREN { $1 $3 }
-| exp PLUS exp        { $1 +. $3 }
-| exp MINUS exp       { $1 -. $3 }
-| exp MULTIPLY exp    { $1 *. $3 }
-| exp DIVIDE exp
-	{
-		if $3 <> 0.0 then
-			$1 /. $3
-		else (
-			let start_pos = Parsing.rhs_start_pos 3 in
-			let end_pos = Parsing.rhs_end_pos 3 in
-			printf "%d.%d-%d.%d: division by zero"
-			  start_pos.pos_lnum (start_pos.pos_cnum - start_pos.pos_bol)
-			  end_pos.pos_lnum (end_pos.pos_cnum - end_pos.pos_bol);
-			1.0
-		)
-	}
-| MINUS exp %prec NEG { -. $2 }
-| exp CARET exp       { $1 ** $3 }
-| exp LT exp          { if $1 < $3 then 1.0 else 0.0 }
-| exp GT exp          { if $1 > $3 then 1.0 else 0.0 }
-| exp EQ exp          { if $1 == $3 then 1.0 else 0.0 }
-| exp NEQ exp         { if $1 <> $3 then 1.0 else 0.0 }
-| IF exp THEN exp ELSE exp { if $2 <> 0.0 then $4 else $6 }
-| LPAREN exp RPAREN   { $2 }
-| exp COMMA exp       { $3 }
+  NUM                      { }
+| exp PLUS exp             { }
+| exp MINUS exp            { }
+| exp MULTIPLY exp         { }
+| exp DIVIDE exp           { }
+| MINUS exp %prec NEG      { }
+| exp CARET exp            { }
+| exp LT exp               { }
+| exp GT exp               { }
+| exp EQ exp               { }
+| exp NEQ exp              { }
+| IF exp THEN exp ELSE exp { }
+| LPAREN exp RPAREN        { }
+| exp COMMA exp            { }
 
 %%

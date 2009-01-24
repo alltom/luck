@@ -1,0 +1,8 @@
+.omakedb*
+*.omc
+*.cm?
+*.run
+lexer.ml
+parser.ml
+parser.mli
+link

@@ -17,6 +17,8 @@ rule token = parse
 | '\n'                     { incr_lineno lexbuf; token lexbuf }
 | ';'                      { SEMICOLON }
 | "fun"                    { FUN }
+| "class"                  { CLASS }
+| "extends"                { EXTENDS }
 | "while"                  { WHILE }
 | "if"                     { IF }
 | "then"                   { THEN }

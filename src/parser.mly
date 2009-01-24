@@ -9,7 +9,7 @@ let parse_error s = print_endline s
 %token CHUCK
 %token LPAREN RPAREN LBRACE RBRACE EQ NEQ
 %token COMMA
-%token WHILE IF THEN ELSE FUN
+%token WHILE IF THEN ELSE FUN CLASS EXTENDS
 %token <float> NUM
 %token <string> ID
 %token PLUS MINUS MULTIPLY DIVIDE LT GT CARET
@@ -36,11 +36,19 @@ input:
 /* empty */ { }
 | input line { print_endline $2 }
 | input func { print_endline $2 }
+| input clas { print_endline $2 }
 ;
 
 lines:
   line { $1 }
 | lines line { $1 ^ " " ^ $2 }
+;
+
+claslines:
+  line { $1 }
+| func { $1 }
+| claslines line { $1 ^ " " ^ $2 }
+| claslines func { $2 }
 ;
 
 blockornot:
@@ -66,6 +74,19 @@ typ:
 
 func:
   FUN typ ID LPAREN exp RPAREN block { "fun " ^ $2 ^ " " ^ $3 ^ "(" ^ $5 ^ ")" ^ $7 }
+;
+
+id_list:
+  ID { $1 }
+| id_list COMMA ID { $1 ^ ", " ^ $3 }
+
+extend:
+  EXTENDS id_list { "extends " ^ $2 }
+;
+
+clas:
+  CLASS ID LBRACE claslines RBRACE { "class " ^ $2 ^ " {" ^ $4 ^ "}" }
+| CLASS ID extend LBRACE claslines RBRACE { "class " ^ $2 ^ " " ^ $3 ^ " {" ^ $5 ^ "}" }
 ;
 
 exp:

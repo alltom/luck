@@ -28,6 +28,7 @@ rule token = parse
 | digit+ "." digit* as num { NUM (float_of_string num) }
 | ident as name            { ID(name) }
 | "=>"                     { CHUCK }
+| '@'                      { AT }
 | '+'                      { PLUS }
 | '-'                      { MINUS }
 | '*'                      { MULTIPLY }

@@ -8,7 +8,7 @@ let parse_error s = print_endline s
 %token SEMICOLON
 %token CHUCK
 %token LPAREN RPAREN LBRACE RBRACE EQ NEQ
-%token COMMA
+%token COMMA AT
 %token WHILE IF THEN ELSE FUN CLASS EXTENDS
 %token <float> NUM
 %token <string> ID
@@ -70,6 +70,7 @@ line:
 
 typ:
   ID { $1 }
+| typ AT { $1 ^ "@" }
 ;
 
 paramlist:

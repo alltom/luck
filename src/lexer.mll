@@ -33,6 +33,7 @@ rule token = parse
 | '{'                      { LBRACE }
 | '}'                      { RBRACE }
 | ','                      { COMMA }
+| "while"                  { WHILE }
 | "if"                     { IF }
 | "then"                   { THEN }
 | "else"                   { ELSE }

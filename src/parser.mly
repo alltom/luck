@@ -8,7 +8,7 @@ let parse_error s = print_endline s
 %token SEMICOLON
 %token LPAREN RPAREN LBRACE RBRACE EQ AEQ NEQ
 %token COMMA
-%token IF THEN ELSE
+%token WHILE IF THEN ELSE
 %token <float> NUM
 %token PLUS MINUS MULTIPLY DIVIDE LT GT CARET
 
@@ -19,8 +19,6 @@ let parse_error s = print_endline s
 %left MULTIPLY DIVIDE
 %left NEG /* negation */
 %right CARET
-
-%left IFX
 %left ELSE
 
 %start input
@@ -38,8 +36,9 @@ lines:
 
 line:
   SEMICOLON       { }
-| IF LPAREN exp RPAREN LBRACE lines RBRACE %prec IFX { }
-| IF LPAREN exp RPAREN LBRACE lines RBRACE ELSE LBRACE lines RBRACE %prec IFX { }
+| WHILE LPAREN exp RPAREN LBRACE lines RBRACE { }
+| IF LPAREN exp RPAREN LBRACE lines RBRACE { }
+| IF LPAREN exp RPAREN LBRACE lines RBRACE ELSE LBRACE lines RBRACE { }
 | exp SEMICOLON   { }
 
 exp:

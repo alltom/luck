@@ -9,7 +9,7 @@ let parse_error s = print_endline s
 %token CHUCK
 %token LPAREN RPAREN LBRACE RBRACE LBRACK RBRACK EQ NEQ
 %token COMMA AT
-%token WHILE IF THEN ELSE FUN CLASS EXTENDS
+%token WHILE IF THEN ELSE FUN PUBLIC CLASS EXTENDS
 %token <float> NUM
 %token <string> ID
 %token PLUS MINUS MULTIPLY DIVIDE LT GT CARET
@@ -62,6 +62,11 @@ block:
 | LBRACE RBRACE { "{ }" }
 ;
 
+clasblock:
+  LBRACE claslines RBRACE { "{" ^ $2 ^ "}" }
+| LBRACE RBRACE { "{ }" }
+;
+
 line:
   SEMICOLON { ";" }
 | WHILE LPAREN exp RPAREN blockornot { "while(" ^ $3 ^ ") " ^ $5 }
@@ -93,9 +98,14 @@ extend:
   EXTENDS id_list { "extends " ^ $2 }
 ;
 
+pub:
+  { "" }
+| PUBLIC { "public " }
+;
+
 clas:
-  CLASS ID LBRACE claslines RBRACE { "class " ^ $2 ^ " {" ^ $4 ^ "}" }
-| CLASS ID extend LBRACE claslines RBRACE { "class " ^ $2 ^ " " ^ $3 ^ " {" ^ $5 ^ "}" }
+  pub CLASS ID clasblock { $1 ^ "class " ^ $3 ^ " " ^ $4 }
+| pub CLASS ID extend clasblock { $1 ^ "class " ^ $3 ^ " " ^ $4 ^ " " ^ $5 }
 ;
 
 exp:

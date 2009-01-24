@@ -16,6 +16,7 @@ rule token = parse
   [' ' '\t']               { token lexbuf }
 | '\n'                     { incr_lineno lexbuf; token lexbuf }
 | ';'                      { SEMICOLON }
+| "fun"                    { FUN }
 | "while"                  { WHILE }
 | "if"                     { IF }
 | "then"                   { THEN }

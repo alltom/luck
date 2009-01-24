@@ -9,7 +9,7 @@ let parse_error s = print_endline s
 %token CHUCK
 %token LPAREN RPAREN LBRACE RBRACE EQ NEQ
 %token COMMA
-%token WHILE IF THEN ELSE
+%token WHILE IF THEN ELSE FUN
 %token <float> NUM
 %token <string> ID
 %token PLUS MINUS MULTIPLY DIVIDE LT GT CARET
@@ -35,10 +35,13 @@ let parse_error s = print_endline s
 input:
 /* empty */ { }
 | input line { print_endline $2 }
+| input func { print_endline $2 }
+;
 
 lines:
   line { $1 }
 | lines line { $1 ^ " " ^ $2 }
+;
 
 blockornot:
   line { "*{" ^ $1 ^ "}" }
@@ -47,6 +50,7 @@ blockornot:
 
 block:
   LBRACE lines RBRACE { "{" ^ $2 ^ "}" }
+;
 
 line:
   SEMICOLON { ";" }
@@ -54,6 +58,15 @@ line:
 | IF LPAREN exp RPAREN blockornot %prec IFX { "if(" ^ $3 ^ ") " ^ $5 }
 | IF LPAREN exp RPAREN blockornot ELSE blockornot { "if(" ^ $3 ^ ") " ^ $5 ^ " else " ^ $7 }
 | exp SEMICOLON { $1 ^ ";" }
+;
+
+typ:
+  ID { $1 }
+;
+
+func:
+  FUN typ ID LPAREN exp RPAREN block { "fun " ^ $2 ^ " " ^ $3 ^ "(" ^ $5 ^ ")" ^ $7 }
+;
 
 exp:
   NUM                               { string_of_float $1 }
@@ -74,5 +87,6 @@ exp:
 | IF exp THEN exp ELSE exp          { "if " ^ $2 ^ " then " ^ $4 ^ " else " ^ $6 }
 | LPAREN exp RPAREN %prec PRECPAREN { "(" ^ $2 ^ ")" }
 | exp COMMA exp                     { $1 ^ ", " ^ $3 }
+;
 
 %%

@@ -46,4 +46,5 @@ rule token = parse
 | '['                      { LBRACK }
 | ']'                      { RBRACK }
 | ','                      { COMMA }
+| '.'                      { PERIOD }
 | eof                      { raise End_of_file }

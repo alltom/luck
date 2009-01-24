@@ -5,7 +5,7 @@ open Lexing
 let parse_error s = print_endline s
 %}
 
-%token SEMICOLON
+%token SEMICOLON PERIOD
 %token CHUCK
 %token LPAREN RPAREN LBRACE RBRACE LBRACK RBRACK EQ NEQ
 %token COMMA AT
@@ -108,9 +108,15 @@ clas:
 | pub CLASS ID extend clasblock { $1 ^ "class " ^ $3 ^ " " ^ $4 ^ " " ^ $5 }
 ;
 
+dotted_id:
+  ID { $1 }
+| dotted_id PERIOD ID { $1 ^ "." ^ $3 }
+;
+
 exp:
   NUM                               { string_of_float $1 }
-| ID                                { $1 }
+| dotted_id                         { $1 }
+| LPAREN exp RPAREN PERIOD ID       { "(" ^ $2 ^ ")." ^ $5 }
 | exp CHUCK exp                     { $1 ^ " => " ^ $3 }
 | exp PLUS exp                      { $1 ^ " + " ^ $3 }
 | exp MINUS exp                     { $1 ^ " - " ^ $3 }
@@ -123,7 +129,7 @@ exp:
 | exp EQ exp                        { $1 ^ " == " ^ $3 }
 | exp NEQ exp                       { $1 ^ " != " ^ $3 }
 | ID ID                             { $1 ^ " " ^ $2 }
-| ID LPAREN exp RPAREN              { $1 ^ "(" ^ $3 ^ ")" }
+| dotted_id LPAREN exp RPAREN       { $1 ^ "(" ^ $3 ^ ")" }
 | IF exp THEN exp ELSE exp          { "if " ^ $2 ^ " then " ^ $4 ^ " else " ^ $6 }
 | LPAREN exp RPAREN %prec PRECPAREN { "(" ^ $2 ^ ")" }
 | ID LBRACK exp RBRACK              { $1 ^ "[" ^ $3 ^ "]" }

@@ -73,8 +73,8 @@ typ:
 ;
 
 paramlist:
-  ID ID { $1 ^ " " ^ $2 }
-| paramlist COMMA ID ID { $1 ^ ", " ^ $3 ^ " " ^ $4 }
+  typ ID { $1 ^ " " ^ $2 }
+| paramlist COMMA typ ID { $1 ^ ", " ^ $3 ^ " " ^ $4 }
 
 func:
   FUN typ ID LPAREN paramlist RPAREN block { "fun " ^ $2 ^ " " ^ $3 ^ "(" ^ $5 ^ ")" ^ $7 }
@@ -107,7 +107,7 @@ exp:
 | exp GT exp                        { $1 ^ " > " ^ $3 }
 | exp EQ exp                        { $1 ^ " == " ^ $3 }
 | exp NEQ exp                       { $1 ^ " != " ^ $3 }
-| ID ID                             { $1 ^ " " ^ $2 }
+| typ ID                            { $1 ^ " " ^ $2 }
 | ID LPAREN exp RPAREN              { $1 ^ "(" ^ $3 ^ ")" }
 | IF exp THEN exp ELSE exp          { "if " ^ $2 ^ " then " ^ $4 ^ " else " ^ $6 }
 | LPAREN exp RPAREN %prec PRECPAREN { "(" ^ $2 ^ ")" }

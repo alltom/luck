@@ -6,7 +6,7 @@ let parse_error s = print_endline s
 %}
 
 %token SEMICOLON
-%token LPAREN RPAREN EQ AEQ NEQ
+%token LPAREN RPAREN LBRACE RBRACE EQ AEQ NEQ
 %token COMMA
 %token IF THEN ELSE
 %token <float> NUM
@@ -20,6 +20,7 @@ let parse_error s = print_endline s
 %left NEG /* negation */
 %right CARET
 
+%left IFX
 %left ELSE
 
 %start input
@@ -29,12 +30,17 @@ let parse_error s = print_endline s
 
 input:
 /* empty */  { }
-| input line { }
+| input line { print_endline "^_~" }
+
+lines:
+  line  { }
+| lines line { }
 
 line:
   SEMICOLON       { }
+| IF LPAREN exp RPAREN LBRACE lines RBRACE %prec IFX { }
+| IF LPAREN exp RPAREN LBRACE lines RBRACE ELSE LBRACE lines RBRACE %prec IFX { }
 | exp SEMICOLON   { }
-| error SEMICOLON { }
 
 exp:
   NUM                      { }

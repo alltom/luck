@@ -30,6 +30,8 @@ rule token = parse
 | "!="                     { NEQ }
 | '('                      { LPAREN }
 | ')'                      { RPAREN }
+| '{'                      { LBRACE }
+| '}'                      { RBRACE }
 | ','                      { COMMA }
 | "if"                     { IF }
 | "then"                   { THEN }

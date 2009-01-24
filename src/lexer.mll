@@ -32,7 +32,8 @@ let ident = ['a'-'z' 'A'-'Z']
 let ident_num = ['a'-'z' 'A'-'Z' '0'-'9']
 rule token = parse
   [' ' '\t']               { token lexbuf }
-| '\n'                     { incr_lineno lexbuf; NEWLINE }
+| '\n'                     { incr_lineno lexbuf; token lexbuf }
+| ';'                      { SEMICOLON }
 | digit+
 | "." digit+
 | digit+ "." digit* as num { NUM (float_of_string num) }
@@ -49,6 +50,8 @@ rule token = parse
 | ')'                      { RPAREN }
 | '='                      { AEQ }
 | ','                      { COMMA }
+| "if"                     { IF }
+| "else"                   { ELSE }
 | ident ident_num* as word { try let f = Hashtbl.find fun_table word in FNCT f with Not_found -> VAR word }
 | _                        { token lexbuf }
 | eof                      { raise End_of_file }

@@ -7,22 +7,25 @@ let var_table = Hashtbl.create 16
 let parse_error s = print_endline s
 %}
 
-%token NEWLINE
+%token NEWLINE SEMICOLON
 %token LPAREN RPAREN EQ AEQ NEQ
 %token COMMA
+%token IF ELSE
 %token <float> NUM
 %token PLUS MINUS MULTIPLY DIVIDE LT GT CARET
 %token <string> VAR
 %token <float->float> FNCT
 
 %left COMMA
-%left EQ NEQ
-%nonassoc LT GT
+%left EQ NEQ LT GT
 %left AEQ
 %left PLUS MINUS
 %left MULTIPLY DIVIDE
 %left NEG /* negation */
 %right CARET
+
+%nonassoc IFX
+%nonassoc ELSE
 
 %start input
 %type <unit> input
@@ -34,9 +37,9 @@ input:
 | input line { }
 
 line:
-  NEWLINE       { }
-| exp NEWLINE   { printf "\t%.10g\n" $1; flush stdout }
-| error NEWLINE { }
+  SEMICOLON       { }
+| exp SEMICOLON   { printf "\t%.10g\n" $1; flush stdout }
+| error SEMICOLON { } /* resume at next command on error */
 
 exp:
   NUM                 { $1 }
@@ -65,6 +68,8 @@ exp:
 | exp GT exp          { if $1 > $3 then 1.0 else 0.0 }
 | exp EQ exp          { if $1 == $3 then 1.0 else 0.0 }
 | exp NEQ exp         { if $1 <> $3 then 1.0 else 0.0 }
+| IF LPAREN exp RPAREN exp %prec IFX { if $3 <> 0.0 then $5 else 0.0 }
+| IF LPAREN exp RPAREN exp ELSE exp { if $3 <> 0.0 then $5 else $7 }
 | LPAREN exp RPAREN   { $2 }
 | exp COMMA exp       { $3 }
 

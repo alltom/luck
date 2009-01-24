@@ -29,7 +29,6 @@ let parse_error s = print_endline s
 
 %start input
 %type <unit> input
-%type <string> line block exp
 
 %%
 

@@ -26,7 +26,7 @@ let parse_error s = print_endline s
 
 %start input
 %type <unit> input
-%type <string> line exp
+%type <string> line block exp
 
 %%
 
@@ -40,8 +40,11 @@ lines:
 
 blockornot:
   line { "*{" ^ $1 ^ "}" }
-| LBRACE lines RBRACE { "{" ^ $2 ^ "}" }
+| block { $1 }
 ;
+
+block:
+  LBRACE lines RBRACE { "{" ^ $2 ^ "}" }
 
 line:
   SEMICOLON { ";" }

@@ -17,17 +17,16 @@ let parse_error s = print_endline s
 %left CHUCK
 %left COMMA
 %left EQ NEQ LT GT
-%left AEQ
 %left PLUS MINUS
 %left MULTIPLY DIVIDE
-%left NEG /* negation */
-%left SUBSC
 %right CARET
+%left NEG
+%left SUBSC
 %left IFX
 %left ELSE
 %left PRECPAREN
 %left PERIOD
-%left FUNCALL
+%left FUNCALL ARRSUB
 
 %start input
 %type <unit> input
@@ -118,10 +117,10 @@ contained_exp:
   NUM                               { string_of_float $1 }
 | ID                                { $1 }
 | LPAREN exp RPAREN %prec PRECPAREN { "(" ^ $2 ^ ")" }
-| contained_exp PERIOD ID           { $1 ^ "." ^ $3 }
+/*| contained_exp PERIOD ID           { $1 ^ "." ^ $3 }*/
 | MINUS contained_exp %prec NEG     { "-" ^ $2 }
-/*| contained_exp LPAREN exp RPAREN %prec FUNCALL       { $1 ^ "(" ^ $3 ^ ")" }*/
-/*| contained_exp LBRACK exp RBRACK { $1 ^ "[" ^ $3 ^ "]" }*/
+| contained_exp LPAREN exp RPAREN %prec FUNCALL       { $1 ^ "(" ^ $3 ^ ")" }
+| contained_exp LBRACK exp RBRACK %prec ARRSUB { $1 ^ "[" ^ $3 ^ "]" }
 ;
 
 uncontained_exp:

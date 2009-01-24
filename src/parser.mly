@@ -114,26 +114,33 @@ dotted_id:
 ;
 
 exp:
+  contained_exp   { $1 }
+| uncontained_exp { $1 }
+
+contained_exp:
   NUM                               { string_of_float $1 }
 | dotted_id                         { $1 }
 | LPAREN exp RPAREN PERIOD ID       { "(" ^ $2 ^ ")." ^ $5 }
-| exp CHUCK exp                     { $1 ^ " => " ^ $3 }
+| MINUS exp %prec NEG               { "-" ^ $2 }
+| dotted_id LPAREN exp RPAREN       { $1 ^ "(" ^ $3 ^ ")" }
+| LPAREN exp RPAREN %prec PRECPAREN { "(" ^ $2 ^ ")" }
+| LPAREN exp RPAREN LBRACK exp RBRACK { "(" ^ $2 ^ ")[" ^ $5 ^ "]" }
+| ID LBRACK exp RBRACK              { $1 ^ "[" ^ $3 ^ "]" }
+;
+
+uncontained_exp:
+  exp CHUCK exp                     { $1 ^ " => " ^ $3 }
 | exp PLUS exp                      { $1 ^ " + " ^ $3 }
 | exp MINUS exp                     { $1 ^ " - " ^ $3 }
 | exp MULTIPLY exp                  { $1 ^ " * " ^ $3 }
 | exp DIVIDE exp                    { $1 ^ " / " ^ $3 }
-| MINUS exp %prec NEG               { "-" ^ $2 }
 | exp CARET exp                     { $1 ^ " ^ " ^ $3 }
 | exp LT exp                        { $1 ^ " < " ^ $3 }
 | exp GT exp                        { $1 ^ " > " ^ $3 }
 | exp EQ exp                        { $1 ^ " == " ^ $3 }
 | exp NEQ exp                       { $1 ^ " != " ^ $3 }
 | ID ID                             { $1 ^ " " ^ $2 }
-| dotted_id LPAREN exp RPAREN       { $1 ^ "(" ^ $3 ^ ")" }
 | IF exp THEN exp ELSE exp          { "if " ^ $2 ^ " then " ^ $4 ^ " else " ^ $6 }
-| LPAREN exp RPAREN %prec PRECPAREN { "(" ^ $2 ^ ")" }
-| ID LBRACK exp RBRACK              { $1 ^ "[" ^ $3 ^ "]" }
-| LPAREN exp RPAREN LBRACK exp RBRACK { "(" ^ $2 ^ ")[" ^ $5 ^ "]" }
 | exp COMMA exp                     { $1 ^ ", " ^ $3 }
 ;
 

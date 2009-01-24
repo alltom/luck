@@ -21,6 +21,7 @@ let parse_error s = print_endline s
 %left PLUS MINUS
 %left MULTIPLY DIVIDE
 %left NEG /* negation */
+%left SUBSC
 %right CARET
 %left IFX
 %left ELSE
@@ -58,6 +59,7 @@ blockornot:
 
 block:
   LBRACE lines RBRACE { "{" ^ $2 ^ "}" }
+| LBRACE RBRACE { "{ }" }
 ;
 
 line:
@@ -71,6 +73,7 @@ line:
 typ:
   ID { $1 }
 | typ AT { $1 ^ "@" }
+| typ LBRACK RBRACK { $1 ^ "[]" }
 | typ LBRACK exp RBRACK { $1 ^ "[" ^ $3 ^ "]" }
 ;
 
@@ -109,10 +112,12 @@ exp:
 | exp GT exp                        { $1 ^ " > " ^ $3 }
 | exp EQ exp                        { $1 ^ " == " ^ $3 }
 | exp NEQ exp                       { $1 ^ " != " ^ $3 }
-| typ ID                            { $1 ^ " " ^ $2 }
+| ID ID                             { $1 ^ " " ^ $2 }
 | ID LPAREN exp RPAREN              { $1 ^ "(" ^ $3 ^ ")" }
 | IF exp THEN exp ELSE exp          { "if " ^ $2 ^ " then " ^ $4 ^ " else " ^ $6 }
 | LPAREN exp RPAREN %prec PRECPAREN { "(" ^ $2 ^ ")" }
+| ID LBRACK exp RBRACK              { $1 ^ "[" ^ $3 ^ "]" }
+| LPAREN exp RPAREN LBRACK exp RBRACK { "(" ^ $2 ^ ")[" ^ $5 ^ "]" }
 | exp COMMA exp                     { $1 ^ ", " ^ $3 }
 ;
 

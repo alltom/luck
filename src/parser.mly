@@ -66,6 +66,7 @@ exp:
 | exp GT exp                        { $1 ^ " > " ^ $3 }
 | exp EQ exp                        { $1 ^ " == " ^ $3 }
 | exp NEQ exp                       { $1 ^ " != " ^ $3 }
+| ID ID                             { $1 ^ " " ^ $2 }
 | ID LPAREN exp RPAREN              { $1 ^ "(" ^ $3 ^ ")" }
 | IF exp THEN exp ELSE exp          { "if " ^ $2 ^ " then " ^ $4 ^ " else " ^ $6 }
 | LPAREN exp RPAREN %prec PRECPAREN { "(" ^ $2 ^ ")" }

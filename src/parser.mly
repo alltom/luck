@@ -6,13 +6,15 @@ let parse_error s = print_endline s
 %}
 
 %token SEMICOLON
-%token LPAREN RPAREN LBRACE RBRACE EQ AEQ NEQ
+%token CHUCK
+%token LPAREN RPAREN LBRACE RBRACE EQ NEQ
 %token COMMA
 %token WHILE IF THEN ELSE
 %token <float> NUM
 %token <string> ID
 %token PLUS MINUS MULTIPLY DIVIDE LT GT CARET
 
+%left CHUCK
 %left COMMA
 %left EQ NEQ LT GT
 %left AEQ
@@ -56,6 +58,7 @@ line:
 exp:
   NUM                               { string_of_float $1 }
 | ID                                { $1 }
+| exp CHUCK exp                     { $1 ^ " => " ^ $3 }
 | exp PLUS exp                      { $1 ^ " + " ^ $3 }
 | exp MINUS exp                     { $1 ^ " - " ^ $3 }
 | exp MULTIPLY exp                  { $1 ^ " * " ^ $3 }

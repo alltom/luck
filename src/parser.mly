@@ -10,6 +10,7 @@ let parse_error s = print_endline s
 %token COMMA
 %token WHILE IF THEN ELSE
 %token <float> NUM
+%token <string> ID
 %token PLUS MINUS MULTIPLY DIVIDE LT GT CARET
 
 %left COMMA
@@ -51,6 +52,7 @@ line:
 
 exp:
   NUM                               { string_of_float $1 }
+| ID                                { $1 }
 | exp PLUS exp                      { $1 ^ " + " ^ $3 }
 | exp MINUS exp                     { $1 ^ " - " ^ $3 }
 | exp MULTIPLY exp                  { $1 ^ " * " ^ $3 }

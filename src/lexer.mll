@@ -19,6 +19,7 @@ rule token = parse
 | digit+
 | "." digit+
 | digit+ "." digit* as num { NUM (float_of_string num) }
+| ident as name            { ID(name) }
 | '+'                      { PLUS }
 | '-'                      { MINUS }
 | '*'                      { MULTIPLY }

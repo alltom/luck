@@ -14,8 +14,8 @@ let digit = ['0'-'9']
 let ident = ['a'-'z' 'A'-'Z'] ['a'-'z' 'A'-'Z' '0'-'9']*
 rule token = parse
   [' ' '\t']               { token lexbuf }
-| '\n'                     { incr_lineno lexbuf; token lexbuf }
-| "//" [^'\n']*            { token lexbuf }
+| '\n' '\r'? | '\r' '\n'?  { incr_lineno lexbuf; token lexbuf }
+| "//" [^'\n' '\r']*       { token lexbuf }
 | '"' (([^ '"' '\\']| '\\'_)* as s) '"' { STRING (s) }
 | ';'                      { SEMICOLON }
 | "fun"                    { FUN }
@@ -39,6 +39,8 @@ rule token = parse
 | '*'                      { MULTIPLY }
 | '/'                      { DIVIDE }
 | '^'                      { CARET }
+| "<<<"                    { LARROWS }
+| ">>>"                    { RARROWS }
 | '<'                      { LT }
 | '>'                      { GT }
 | "=="                     { EQ }
@@ -51,4 +53,5 @@ rule token = parse
 | ']'                      { RBRACK }
 | ','                      { COMMA }
 | '.'                      { PERIOD }
+| '!'                      { BANG }
 | eof                      { raise End_of_file }

@@ -6,7 +6,8 @@ let parse_error s = print_endline s
 %}
 
 %token SEMICOLON PERIOD
-%token CHUCK DOLLAR CCOLON SPORK
+%token CHUCK DOLLAR CCOLON SPORK BANG
+%token LARROWS RARROWS
 %token LPAREN RPAREN LBRACE RBRACE LBRACK RBRACK EQ NEQ
 %token COMMA AT
 %token WHILE IF ELSE FUN PUBLIC CLASS EXTENDS
@@ -74,6 +75,7 @@ clasblock:
 
 line:
   SEMICOLON { ";" }
+| LARROWS exp RARROWS SEMICOLON { "<<< " ^ $2 ^ " >>>;" }
 | WHILE LPAREN exp RPAREN blockornot { "while(" ^ $3 ^ ") " ^ $5 }
 | IF LPAREN exp RPAREN blockornot %prec IFX { "if(" ^ $3 ^ ") " ^ $5 }
 | IF LPAREN exp RPAREN blockornot ELSE blockornot { "if(" ^ $3 ^ ") " ^ $5 ^ " else " ^ $7 }
@@ -126,6 +128,7 @@ contained_exp:
 | LPAREN exp RPAREN %prec PRECPAREN { "(" ^ $2 ^ ")" }
 | contained_exp PERIOD ID           { "(" ^ $1 ^ "." ^ $3 ^ ")" }
 | MINUS contained_exp %prec NEG     { "-(" ^ $2 ^ ")" }
+| BANG contained_exp %prec NEG      { "!(" ^ $2 ^ ")" }
 | contained_exp LPAREN exp RPAREN { $1 ^ "(" ^ $3 ^ ")" }
 | contained_exp LPAREN RPAREN { "(" ^ $1 ^ "())" }
 | contained_exp LBRACK exp RBRACK  { $1 ^ "[" ^ $3 ^ "]" }

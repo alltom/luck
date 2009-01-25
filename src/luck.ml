@@ -5,6 +5,6 @@ let main () =
     while true do
       Parser.input Lexer.token lexbuf
     done
-  with End_of_file -> exit 0
+  with End_of_file -> exit 0 | Parsing.Parse_error -> exit 1
 
 let _ = Printexc.print main ()

@@ -2,7 +2,11 @@
 open Printf
 open Lexing
 
-let parse_error s = print_endline s
+let parse_error s =
+  printf "syntax error at line %d, character %d: %s\n"
+    (symbol_start_pos ()).pos_lnum
+    (symbol_start_pos ()).pos_cnum
+    s
 %}
 
 %token SEMICOLON PERIOD

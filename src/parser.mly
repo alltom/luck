@@ -12,7 +12,7 @@ let parse_error s = print_endline s
 %token LPAREN RPAREN LBRACE RBRACE LBRACK RBRACK EQ NEQ
 %token AMPAMP PIPEPIPE
 %token COMMA AT
-%token WHILE IF ELSE FOR FUN RETURN PUBLIC CLASS EXTENDS
+%token WHILE IF ELSE FOR FUN RETURN PUBLIC STATIC CLASS EXTENDS
 %token <float> FLOAT
 %token <int> INT
 %token <bool> BOOL
@@ -85,6 +85,8 @@ line:
 typ:
   ID { $1 }
 | ID AT { $1 ^ " @" }
+| STATIC ID { "static " ^ $2 }
+| STATIC ID AT { "static " ^ $2 ^ " @" }
 ;
 
 declarator:

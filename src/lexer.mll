@@ -24,6 +24,7 @@ rule token = parse
 | "return"                 { RETURN }
 | "fun"                    { FUN }
 | "public"                 { PUBLIC }
+| "static"                 { STATIC }
 | "class"                  { CLASS }
 | "extends"                { EXTENDS }
 | "while"                  { WHILE }

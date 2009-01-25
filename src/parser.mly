@@ -6,10 +6,11 @@ let parse_error s = print_endline s
 %}
 
 %token SEMICOLON PERIOD
-%token CHUCK UPCHUCK ATCHUCK MINUSCHUCK PLUSCHUCK
+%token CHUCK UNCHUCK UPCHUCK ATCHUCK MINUSCHUCK PLUSCHUCK
 %token DOLLAR CCOLON SPORK BANG QUESTION COLON
 %token LARROWS RARROWS
-%token LPAREN RPAREN LBRACE RBRACE LBRACK RBRACK EQ NEQ AMPAMP
+%token LPAREN RPAREN LBRACE RBRACE LBRACK RBRACK EQ NEQ
+%token AMPAMP PIPEPIPE
 %token COMMA AT
 %token WHILE IF ELSE FOR FUN PUBLIC CLASS EXTENDS
 %token <float> FLOAT
@@ -20,7 +21,8 @@ let parse_error s = print_endline s
 %token PLUS MINUS MULTIPLY DIVIDE PERCENT LT GT LEQ GEQ CARET
 %token PLUSPLUS MINUSMINUS
 
-%left CHUCK UPCHUCK ATCHUCK MINUSCHUCK PLUSCHUCK
+%left CHUCK UNCHUCK UPCHUCK ATCHUCK MINUSCHUCK PLUSCHUCK
+%left DECL /* int a, b, c */
 %left COMMA
 %left QUESTION COLON
 %left EQ NEQ LT GT LEQ GEQ
@@ -31,7 +33,7 @@ let parse_error s = print_endline s
 %left DOLLAR
 %left CCOLON
 %left SPORK
-%left AMPAMP
+%left AMPAMP PIPEPIPE
 %left NEG
 %nonassoc PLUSPLUS MINUSMINUS
 %left SUBSC
@@ -80,18 +82,29 @@ line:
 
 typ:
   ID { $1 }
-| typ AT { $1 ^ "@" }
-| typ LBRACK RBRACK { $1 ^ "[]" }
-| typ LBRACK exp RBRACK { $1 ^ "[" ^ $3 ^ "]" }
+| ID AT { $1 ^ " @" }
+;
+
+declarator:
+  ID { $1 }
+| declarator LBRACK RBRACK { $1 ^ "[]" }
+| declarator LBRACK exp RBRACK { $1 ^ "[" ^ $3 ^ "]" }
+;
+
+declarator_list:
+  declarator { $1 }
+| declarator_list COMMA declarator { $1 ^ ", " ^ $3 }
 ;
 
 optional_exp:
   { "" }
 | exp { $1 }
+;
 
 exp:
   contained_exp   { $1 }
 | uncontained_exp { $1 }
+;
 
 contained_exp:
   INT                               { string_of_int $1 }
@@ -113,6 +126,7 @@ contained_exp:
 
 uncontained_exp:
   exp CHUCK exp            { $1 ^ " => " ^ $3 }
+| exp UNCHUCK exp          { $1 ^ " =< " ^ $3 }
 | exp UPCHUCK exp          { $1 ^ " =^ " ^ $3 }
 | exp ATCHUCK exp          { $1 ^ " @=> " ^ $3 }
 | exp MINUSCHUCK exp       { $1 ^ " -=> " ^ $3 }
@@ -133,16 +147,17 @@ uncontained_exp:
 | exp EQ exp               { $1 ^ " == " ^ $3 }
 | exp NEQ exp              { $1 ^ " != " ^ $3 }
 | exp AMPAMP exp           { $1 ^ " && " ^ $3 }
+| exp PIPEPIPE exp         { $1 ^ " || " ^ $3 }
 | exp QUESTION exp COLON exp { "(" ^ $1 ^ ") ? (" ^ $3 ^ ") : (" ^ $5 ^ ")" }
-| ID ID                    { $1 ^ " " ^ $2 }
+| typ declarator_list %prec DECL { "(" ^ $1 ^ " " ^ $2 ^ ")" }
 | exp COMMA exp            { $1 ^ ", " ^ $3 }
 ;
 
 /* FUNCTIONS */
 
 paramlist:
-  typ ID { $1 ^ " " ^ $2 }
-| paramlist COMMA typ ID { $1 ^ ", " ^ $3 ^ " " ^ $4 }
+  typ declarator { $1 ^ " " ^ $2 }
+| paramlist COMMA typ declarator { $1 ^ ", " ^ $3 ^ " " ^ $4 }
 
 func:
   FUN typ ID LPAREN RPAREN block { "fun " ^ $2 ^ " " ^ $3 ^ "() " ^ $6 }

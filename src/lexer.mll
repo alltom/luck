@@ -38,6 +38,7 @@ rule token = parse
 | "=^"                     { UPCHUCK }
 | "@=>"                    { ATCHUCK }
 | "=>"                     { CHUCK }
+| "=<"                     { UNCHUCK }
 | '@'                      { AT }
 | '$'                      { DOLLAR }
 | "::"                     { CCOLON }
@@ -59,6 +60,7 @@ rule token = parse
 | "=="                     { EQ }
 | "!="                     { NEQ }
 | "&&"                     { AMPAMP }
+| "||"                     { PIPEPIPE }
 | '('                      { LPAREN }
 | ')'                      { RPAREN }
 | '{'                      { LBRACE }

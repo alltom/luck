@@ -26,6 +26,7 @@ rule token = parse
 | "while"                  { WHILE }
 | "if"                     { IF }
 | "else"                   { ELSE }
+| "for"                    { FOR }
 | "." digit+
 | digit+ "." digit* as num { FLOAT (float_of_string num) }
 | digit+ as num            { INT (int_of_string num) }
@@ -36,7 +37,9 @@ rule token = parse
 | '$'                      { DOLLAR }
 | "::"                     { CCOLON }
 | "spork ~"                { SPORK }
+| "++"                     { PLUSPLUS }
 | '+'                      { PLUS }
+| "--"                     { MINUSMINUS }
 | '-'                      { MINUS }
 | '*'                      { MULTIPLY }
 | '/'                      { DIVIDE }

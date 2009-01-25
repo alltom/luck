@@ -11,12 +11,13 @@ let parse_error s = print_endline s
 %token LARROWS RARROWS
 %token LPAREN RPAREN LBRACE RBRACE LBRACK RBRACK EQ NEQ
 %token COMMA AT
-%token WHILE IF ELSE FUN PUBLIC CLASS EXTENDS
+%token WHILE IF ELSE FOR FUN PUBLIC CLASS EXTENDS
 %token <float> FLOAT
 %token <int> INT
 %token <string> ID
 %token <string> STRING
 %token PLUS MINUS MULTIPLY DIVIDE LT GT CARET
+%token PLUSPLUS MINUSMINUS
 
 %left CHUCK UPCHUCK
 %left COMMA
@@ -28,10 +29,10 @@ let parse_error s = print_endline s
 %left CCOLON
 %left SPORK
 %left NEG
+%nonassoc PLUSPLUS MINUSMINUS
 %left SUBSC
 %left IFX
 %left ELSE
-%left PRECPAREN
 %left LPAREN LBRACK
 %left PERIOD
 
@@ -70,6 +71,7 @@ line:
 | WHILE LPAREN exp RPAREN blockornot { "while(" ^ $3 ^ ") " ^ $5 }
 | IF LPAREN exp RPAREN blockornot %prec IFX { "if(" ^ $3 ^ ") " ^ $5 }
 | IF LPAREN exp RPAREN blockornot ELSE blockornot { "if(" ^ $3 ^ ") " ^ $5 ^ " else " ^ $7 }
+| FOR LPAREN optional_exp SEMICOLON optional_exp SEMICOLON optional_exp RPAREN blockornot { "for(" ^ $3 ^ "; " ^ $5 ^ "; " ^ $7 ^ ") " ^ $9 }
 ;
 
 typ:
@@ -78,6 +80,10 @@ typ:
 | typ LBRACK RBRACK { $1 ^ "[]" }
 | typ LBRACK exp RBRACK { $1 ^ "[" ^ $3 ^ "]" }
 ;
+
+optional_exp:
+  { "" }
+| exp { $1 }
 
 exp:
   contained_exp   { $1 }
@@ -88,10 +94,12 @@ contained_exp:
 | FLOAT                             { string_of_float $1 }
 | ID                                { $1 }
 | STRING                            { "\"" ^ $1 ^ "\"" }
-| LPAREN exp RPAREN %prec PRECPAREN { "(" ^ $2 ^ ")" }
+| LPAREN exp RPAREN { "(" ^ $2 ^ ")" }
 | contained_exp PERIOD ID           { "(" ^ $1 ^ "." ^ $3 ^ ")" }
 | MINUS contained_exp %prec NEG     { "-(" ^ $2 ^ ")" }
 | BANG contained_exp %prec NEG      { "!(" ^ $2 ^ ")" }
+| contained_exp PLUSPLUS            { "(" ^ $1 ^ ")++" }
+| contained_exp MINUSMINUS          { "(" ^ $1 ^ ")--" }
 | contained_exp LPAREN exp RPAREN   { $1 ^ "(" ^ $3 ^ ")" }
 | contained_exp LPAREN RPAREN       { "(" ^ $1 ^ "())" }
 | contained_exp LBRACK exp RBRACK   { $1 ^ "[" ^ $3 ^ "]" }

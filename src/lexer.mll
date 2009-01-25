@@ -16,6 +16,7 @@ rule token = parse
   [' ' '\t']               { token lexbuf }
 | '\n' '\r'? | '\r' '\n'?  { incr_lineno lexbuf; token lexbuf }
 | "//" [^'\n' '\r']*       { token lexbuf }
+| "/*" ('*' [^'/'] | [^'*'])* "*/"      { token lexbuf }
 | '"' (([^ '"' '\\']| '\\'_)* as s) '"' { STRING (s) }
 | ';'                      { SEMICOLON }
 | "fun"                    { FUN }

@@ -1,8 +1,12 @@
 
-(* declaration: base type * (variable name * array depth) list *)
-type decl =
-  Decl of string * (string * int) list
-| ReferenceDecl of string * (string * int) list
+(* type: base type * reference type? * array depth *)
+type typ = string * bool * int
+
+(* declaration of one variable *)
+type vardecl = string * typ
+
+(* declaration of many variables *)
+type decl = vardecl list
 
 type expr =
   Int of int
@@ -56,3 +60,12 @@ type stmt =
 | Until of expr * expr list
 | If of expr * expr list * expr list
 | For of expr * expr * expr * expr list
+
+type func =
+  Function of typ * string * decl * expr list
+
+(* public? * name * extended classes * functions * body expressions *)
+type clas =
+  Class of bool * string * string list * func list * expr list
+
+type ast = func list * clas list * expr list

@@ -7,7 +7,7 @@ let parse_error s = print_endline s
 
 %token SEMICOLON PERIOD
 %token CHUCK UPCHUCK ATCHUCK MINUSCHUCK PLUSCHUCK
-%token DOLLAR CCOLON SPORK BANG
+%token DOLLAR CCOLON SPORK BANG QUESTION COLON
 %token LARROWS RARROWS
 %token LPAREN RPAREN LBRACE RBRACE LBRACK RBRACK EQ NEQ AMPAMP
 %token COMMA AT
@@ -22,6 +22,7 @@ let parse_error s = print_endline s
 
 %left CHUCK UPCHUCK ATCHUCK MINUSCHUCK PLUSCHUCK
 %left COMMA
+%left QUESTION COLON
 %left EQ NEQ LT GT LEQ GEQ
 %left PLUS MINUS
 %left MULTIPLY DIVIDE
@@ -132,6 +133,7 @@ uncontained_exp:
 | exp EQ exp               { $1 ^ " == " ^ $3 }
 | exp NEQ exp              { $1 ^ " != " ^ $3 }
 | exp AMPAMP exp           { $1 ^ " && " ^ $3 }
+| exp QUESTION exp COLON exp { "(" ^ $1 ^ ") ? (" ^ $3 ^ ") : (" ^ $5 ^ ")" }
 | ID ID                    { $1 ^ " " ^ $2 }
 | exp COMMA exp            { $1 ^ ", " ^ $3 }
 ;

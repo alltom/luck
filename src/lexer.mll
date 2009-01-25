@@ -68,4 +68,6 @@ rule token = parse
 | ','                      { COMMA }
 | '.'                      { PERIOD }
 | '!'                      { BANG }
+| '?'                      { QUESTION }
+| ':'                      { COLON }
 | eof                      { raise End_of_file }

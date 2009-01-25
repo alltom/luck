@@ -29,6 +29,7 @@ rule token = parse
 | "extends"                { EXTENDS }
 | "while"                  { WHILE }
 | "until"                  { UNTIL }
+| "do"                     { DO }
 | "if"                     { IF }
 | "else"                   { ELSE }
 | "for"                    { FOR }

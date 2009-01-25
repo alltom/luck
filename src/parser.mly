@@ -12,7 +12,7 @@ let parse_error s = print_endline s
 %token LPAREN RPAREN LBRACE RBRACE LBRACK RBRACK EQ NEQ
 %token AMPAMP PIPEPIPE
 %token COMMA AT
-%token WHILE IF ELSE FOR FUN RETURN PUBLIC STATIC CLASS EXTENDS
+%token WHILE UNTIL IF ELSE FOR FUN RETURN PUBLIC STATIC CLASS EXTENDS
 %token <float> FLOAT
 %token <int> INT
 %token <bool> BOOL
@@ -77,6 +77,7 @@ line:
 | RETURN exp SEMICOLON { "return " ^ $2 ^ ";" }
 | LARROWS exp RARROWS SEMICOLON { "<<< " ^ $2 ^ " >>>;" }
 | WHILE LPAREN exp RPAREN blockornot { "while(" ^ $3 ^ ") " ^ $5 }
+| UNTIL LPAREN exp RPAREN blockornot { "until(" ^ $3 ^ ") " ^ $5 }
 | IF LPAREN exp RPAREN blockornot %prec IFX { "if(" ^ $3 ^ ") " ^ $5 }
 | IF LPAREN exp RPAREN blockornot ELSE blockornot { "if(" ^ $3 ^ ") " ^ $5 ^ " else " ^ $7 }
 | FOR LPAREN optional_exp SEMICOLON optional_exp SEMICOLON optional_exp RPAREN blockornot { "for(" ^ $3 ^ "; " ^ $5 ^ "; " ^ $7 ^ ") " ^ $9 }
@@ -200,8 +201,8 @@ clasblock:
 claslines:
   line { $1 }
 | func { $1 }
-| claslines line { $1 ^ " " ^ $2 }
-| claslines func { $2 }
+| claslines line { $1 ^ "\n" ^ $2 }
+| claslines func { $1 ^ "\n" ^ $2 }
 ;
 
 clas:

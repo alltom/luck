@@ -28,6 +28,7 @@ rule token = parse
 | "class"                  { CLASS }
 | "extends"                { EXTENDS }
 | "while"                  { WHILE }
+| "until"                  { UNTIL }
 | "if"                     { IF }
 | "else"                   { ELSE }
 | "for"                    { FOR }

@@ -31,6 +31,7 @@ rule token = parse
 | '@'                      { AT }
 | '$'                      { DOLLAR }
 | "::"                     { CCOLON }
+| "spork ~"                { SPORK }
 | '+'                      { PLUS }
 | '-'                      { MINUS }
 | '*'                      { MULTIPLY }

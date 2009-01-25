@@ -119,24 +119,24 @@ contained_exp:
 | LPAREN exp RPAREN %prec PRECPAREN { "(" ^ $2 ^ ")" }
 | contained_exp PERIOD ID           { $1 ^ "." ^ $3 }
 | MINUS contained_exp %prec NEG     { "-" ^ $2 }
-| contained_exp LPAREN exp RPAREN %prec FUNCALL       { $1 ^ "(" ^ $3 ^ ")" }
-| contained_exp LBRACK exp RBRACK %prec ARRSUB { $1 ^ "[" ^ $3 ^ "]" }
+| contained_exp LPAREN exp RPAREN %prec FUNCALL { $1 ^ "(" ^ $3 ^ ")" }
+| contained_exp LBRACK exp RBRACK %prec ARRSUB  { $1 ^ "[" ^ $3 ^ "]" }
 ;
 
 uncontained_exp:
-  exp CHUCK exp                     { $1 ^ " => " ^ $3 }
-| exp PLUS exp                      { $1 ^ " + " ^ $3 }
-| exp MINUS exp                     { $1 ^ " - " ^ $3 }
-| exp MULTIPLY exp                  { $1 ^ " * " ^ $3 }
-| exp DIVIDE exp                    { $1 ^ " / " ^ $3 }
-| exp CARET exp                     { $1 ^ " ^ " ^ $3 }
-| exp LT exp                        { $1 ^ " < " ^ $3 }
-| exp GT exp                        { $1 ^ " > " ^ $3 }
-| exp EQ exp                        { $1 ^ " == " ^ $3 }
-| exp NEQ exp                       { $1 ^ " != " ^ $3 }
-| ID ID                             { $1 ^ " " ^ $2 }
-| IF exp THEN exp ELSE exp          { "if " ^ $2 ^ " then " ^ $4 ^ " else " ^ $6 }
-| exp COMMA exp                     { $1 ^ ", " ^ $3 }
+  exp CHUCK exp            { $1 ^ " => " ^ $3 }
+| exp PLUS exp             { $1 ^ " + " ^ $3 }
+| exp MINUS exp            { $1 ^ " - " ^ $3 }
+| exp MULTIPLY exp         { $1 ^ " * " ^ $3 }
+| exp DIVIDE exp           { $1 ^ " / " ^ $3 }
+| exp CARET exp            { $1 ^ " ^ " ^ $3 }
+| exp LT exp               { $1 ^ " < " ^ $3 }
+| exp GT exp               { $1 ^ " > " ^ $3 }
+| exp EQ exp               { $1 ^ " == " ^ $3 }
+| exp NEQ exp              { $1 ^ " != " ^ $3 }
+| ID ID                    { $1 ^ " " ^ $2 }
+| IF exp THEN exp ELSE exp { "if " ^ $2 ^ " then " ^ $4 ^ " else " ^ $6 }
+| exp COMMA exp            { $1 ^ ", " ^ $3 }
 ;
 
 %%

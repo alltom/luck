@@ -92,14 +92,14 @@ contained_exp:
 | contained_exp PERIOD ID           { "(" ^ $1 ^ "." ^ $3 ^ ")" }
 | MINUS contained_exp %prec NEG     { "-(" ^ $2 ^ ")" }
 | BANG contained_exp %prec NEG      { "!(" ^ $2 ^ ")" }
-| contained_exp LPAREN exp RPAREN { $1 ^ "(" ^ $3 ^ ")" }
-| contained_exp LPAREN RPAREN { "(" ^ $1 ^ "())" }
-| contained_exp LBRACK exp RBRACK  { $1 ^ "[" ^ $3 ^ "]" }
+| contained_exp LPAREN exp RPAREN   { $1 ^ "(" ^ $3 ^ ")" }
+| contained_exp LPAREN RPAREN       { "(" ^ $1 ^ "())" }
+| contained_exp LBRACK exp RBRACK   { $1 ^ "[" ^ $3 ^ "]" }
 ;
 
 uncontained_exp:
   exp CHUCK exp            { $1 ^ " => " ^ $3 }
-| exp UPCHUCK exp            { $1 ^ " =^ " ^ $3 }
+| exp UPCHUCK exp          { $1 ^ " =^ " ^ $3 }
 | exp DOLLAR typ           { $1 ^ " $ " ^ $3 }
 | exp CCOLON typ           { $1 ^ "::" ^ $3 }
 | SPORK exp                { "spork ~ " ^ $2 }

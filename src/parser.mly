@@ -9,7 +9,7 @@ let parse_error s = print_endline s
 %token CHUCK
 %token LPAREN RPAREN LBRACE RBRACE LBRACK RBRACK EQ NEQ
 %token COMMA AT
-%token WHILE IF THEN ELSE FUN PUBLIC CLASS EXTENDS
+%token WHILE IF ELSE FUN PUBLIC CLASS EXTENDS
 %token <float> NUM
 %token <string> ID
 %token PLUS MINUS MULTIPLY DIVIDE LT GT CARET
@@ -135,7 +135,6 @@ uncontained_exp:
 | exp EQ exp               { $1 ^ " == " ^ $3 }
 | exp NEQ exp              { $1 ^ " != " ^ $3 }
 | ID ID                    { $1 ^ " " ^ $2 }
-| IF exp THEN exp ELSE exp { "if " ^ $2 ^ " then " ^ $4 ^ " else " ^ $6 }
 | exp COMMA exp            { $1 ^ ", " ^ $3 }
 ;
 

@@ -17,12 +17,11 @@ rule token = parse
 | '\n'                     { incr_lineno lexbuf; token lexbuf }
 | ';'                      { SEMICOLON }
 | "fun"                    { FUN }
-| "public"                  { PUBLIC }
+| "public"                 { PUBLIC }
 | "class"                  { CLASS }
 | "extends"                { EXTENDS }
 | "while"                  { WHILE }
 | "if"                     { IF }
-| "then"                   { THEN }
 | "else"                   { ELSE }
 | digit+
 | "." digit+

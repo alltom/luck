@@ -118,7 +118,9 @@ contained_exp:
 | MINUS contained_exp %prec NEG     { "-(" ^ $2 ^ ")" }
 | BANG contained_exp %prec NEG      { "!(" ^ $2 ^ ")" }
 | contained_exp PLUSPLUS            { "(" ^ $1 ^ ")++" }
+| PLUSPLUS contained_exp            { "++(" ^ $2 ^ ")" }
 | contained_exp MINUSMINUS          { "(" ^ $1 ^ ")--" }
+| MINUSMINUS contained_exp          { "--(" ^ $2 ^ ")" }
 | contained_exp LPAREN exp RPAREN   { $1 ^ "(" ^ $3 ^ ")" }
 | contained_exp LPAREN RPAREN       { "(" ^ $1 ^ "())" }
 | contained_exp LBRACK exp RBRACK   { $1 ^ "[" ^ $3 ^ "]" }
@@ -155,13 +157,20 @@ uncontained_exp:
 
 /* FUNCTIONS */
 
+functyp:
+  ID { $1 }
+| ID AT { $1 ^ "@" }
+| typ LBRACK RBRACK { $1 ^ "[]" }
+;
+
 paramlist:
   typ declarator { $1 ^ " " ^ $2 }
 | paramlist COMMA typ declarator { $1 ^ ", " ^ $3 ^ " " ^ $4 }
+;
 
 func:
-  FUN typ ID LPAREN RPAREN block { "fun " ^ $2 ^ " " ^ $3 ^ "() " ^ $6 }
-| FUN typ ID LPAREN paramlist RPAREN block { "fun " ^ $2 ^ " " ^ $3 ^ "(" ^ $5 ^ ") " ^ $7 }
+  FUN functyp ID LPAREN RPAREN block { "fun " ^ $2 ^ " " ^ $3 ^ "() " ^ $6 }
+| FUN functyp ID LPAREN paramlist RPAREN block { "fun " ^ $2 ^ " " ^ $3 ^ "(" ^ $5 ^ ") " ^ $7 }
 ;
 
 /* CLASSES */

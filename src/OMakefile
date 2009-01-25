@@ -35,6 +35,7 @@ OCamlGeneratedFiles(parser.ml parser.mli lexer.ml)
 FILES[] =
    parser
    lexer
+   ast
    luck
 
 PROGRAM = luck

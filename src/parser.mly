@@ -6,7 +6,8 @@ let parse_error s = print_endline s
 %}
 
 %token SEMICOLON PERIOD
-%token CHUCK DOLLAR CCOLON SPORK BANG
+%token CHUCK UPCHUCK
+%token DOLLAR CCOLON SPORK BANG
 %token LARROWS RARROWS
 %token LPAREN RPAREN LBRACE RBRACE LBRACK RBRACK EQ NEQ
 %token COMMA AT
@@ -17,7 +18,7 @@ let parse_error s = print_endline s
 %token <string> STRING
 %token PLUS MINUS MULTIPLY DIVIDE LT GT CARET
 
-%left CHUCK
+%left CHUCK UPCHUCK
 %left COMMA
 %left EQ NEQ LT GT
 %left PLUS MINUS
@@ -136,6 +137,7 @@ contained_exp:
 
 uncontained_exp:
   exp CHUCK exp            { $1 ^ " => " ^ $3 }
+| exp UPCHUCK exp            { $1 ^ " =^ " ^ $3 }
 | exp DOLLAR typ           { $1 ^ " $ " ^ $3 }
 | exp CCOLON typ           { $1 ^ "::" ^ $3 }
 | SPORK exp                { "spork ~ " ^ $2 }

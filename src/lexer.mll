@@ -11,7 +11,7 @@
 }
 
 let digit = ['0'-'9']
-let ident = ['a'-'z' 'A'-'Z'] ['a'-'z' 'A'-'Z' '0'-'9']*
+let ident = ['a'-'z' 'A'-'Z'] ['a'-'z' 'A'-'Z' '0'-'9' '_']*
 rule token = parse
   [' ' '\t']               { token lexbuf }
 | '\n' '\r'? | '\r' '\n'?  { incr_lineno lexbuf; token lexbuf }
@@ -31,6 +31,7 @@ rule token = parse
 | digit+ as num            { INT (int_of_string num) }
 | ident as name            { ID(name) }
 | "=>"                     { CHUCK }
+| "=^"                     { UPCHUCK }
 | '@'                      { AT }
 | '$'                      { DOLLAR }
 | "::"                     { CCOLON }

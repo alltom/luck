@@ -140,7 +140,7 @@ uncontained_exp:
 | exp MINUSCHUCK exp       { $1 ^ " -=> " ^ $3 }
 | exp PLUSCHUCK exp        { $1 ^ " +=> " ^ $3 }
 | exp DOLLAR typ           { $1 ^ " $ " ^ $3 }
-| exp CCOLON typ           { $1 ^ "::" ^ $3 }
+| exp CCOLON exp           { $1 ^ "::" ^ $3 }
 | SPORK exp                { "spork ~ " ^ $2 }
 | exp PLUS exp             { $1 ^ " + " ^ $3 }
 | exp MINUS exp            { $1 ^ " - " ^ $3 }

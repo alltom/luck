@@ -18,6 +18,8 @@ rule token = parse
 | "//" [^'\n' '\r']*       { token lexbuf }
 | "/*" ('*' [^'/'] | [^'*'])* "*/"      { token lexbuf }
 | '"' (([^ '"' '\\']| '\\'_)* as s) '"' { STRING (s) }
+| "true"                   { BOOL(true) }
+| "false"                  { BOOL(false) }
 | ';'                      { SEMICOLON }
 | "fun"                    { FUN }
 | "public"                 { PUBLIC }
@@ -31,9 +33,11 @@ rule token = parse
 | digit+ "." digit* as num { FLOAT (float_of_string num) }
 | digit+ as num            { INT (int_of_string num) }
 | ident as name            { ID(name) }
-| "=>"                     { CHUCK }
+| "-=>"                    { MINUSCHUCK }
+| "+=>"                    { PLUSCHUCK }
 | "=^"                     { UPCHUCK }
 | "@=>"                    { ATCHUCK }
+| "=>"                     { CHUCK }
 | '@'                      { AT }
 | '$'                      { DOLLAR }
 | "::"                     { CCOLON }
@@ -45,12 +49,16 @@ rule token = parse
 | '*'                      { MULTIPLY }
 | '/'                      { DIVIDE }
 | '^'                      { CARET }
+| '%'                      { PERCENT }
 | "<<<"                    { LARROWS }
 | ">>>"                    { RARROWS }
+| "<="                     { LEQ }
 | '<'                      { LT }
+| ">="                     { GEQ }
 | '>'                      { GT }
 | "=="                     { EQ }
 | "!="                     { NEQ }
+| "&&"                     { AMPAMP }
 | '('                      { LPAREN }
 | ')'                      { RPAREN }
 | '{'                      { LBRACE }

@@ -6,28 +6,31 @@ let parse_error s = print_endline s
 %}
 
 %token SEMICOLON PERIOD
-%token CHUCK UPCHUCK ATCHUCK
+%token CHUCK UPCHUCK ATCHUCK MINUSCHUCK PLUSCHUCK
 %token DOLLAR CCOLON SPORK BANG
 %token LARROWS RARROWS
-%token LPAREN RPAREN LBRACE RBRACE LBRACK RBRACK EQ NEQ
+%token LPAREN RPAREN LBRACE RBRACE LBRACK RBRACK EQ NEQ AMPAMP
 %token COMMA AT
 %token WHILE IF ELSE FOR FUN PUBLIC CLASS EXTENDS
 %token <float> FLOAT
 %token <int> INT
+%token <bool> BOOL
 %token <string> ID
 %token <string> STRING
-%token PLUS MINUS MULTIPLY DIVIDE LT GT CARET
+%token PLUS MINUS MULTIPLY DIVIDE PERCENT LT GT LEQ GEQ CARET
 %token PLUSPLUS MINUSMINUS
 
-%left CHUCK UPCHUCK ATCHUCK
+%left CHUCK UPCHUCK ATCHUCK MINUSCHUCK PLUSCHUCK
 %left COMMA
-%left EQ NEQ LT GT
+%left EQ NEQ LT GT LEQ GEQ
 %left PLUS MINUS
 %left MULTIPLY DIVIDE
+%left PERCENT
 %right CARET
 %left DOLLAR
 %left CCOLON
 %left SPORK
+%left AMPAMP
 %left NEG
 %nonassoc PLUSPLUS MINUSMINUS
 %left SUBSC
@@ -92,6 +95,7 @@ exp:
 contained_exp:
   INT                               { string_of_int $1 }
 | FLOAT                             { string_of_float $1 }
+| BOOL                              { string_of_bool $1 }
 | ID                                { $1 }
 | STRING                            { "\"" ^ $1 ^ "\"" }
 | LPAREN exp RPAREN                 { "(" ^ $2 ^ ")" }
@@ -110,6 +114,8 @@ uncontained_exp:
   exp CHUCK exp            { $1 ^ " => " ^ $3 }
 | exp UPCHUCK exp          { $1 ^ " =^ " ^ $3 }
 | exp ATCHUCK exp          { $1 ^ " @=> " ^ $3 }
+| exp MINUSCHUCK exp       { $1 ^ " -=> " ^ $3 }
+| exp PLUSCHUCK exp        { $1 ^ " +=> " ^ $3 }
 | exp DOLLAR typ           { $1 ^ " $ " ^ $3 }
 | exp CCOLON typ           { $1 ^ "::" ^ $3 }
 | SPORK exp                { "spork ~ " ^ $2 }
@@ -117,11 +123,15 @@ uncontained_exp:
 | exp MINUS exp            { $1 ^ " - " ^ $3 }
 | exp MULTIPLY exp         { $1 ^ " * " ^ $3 }
 | exp DIVIDE exp           { $1 ^ " / " ^ $3 }
+| exp PERCENT exp          { $1 ^ " % " ^ $3 }
 | exp CARET exp            { $1 ^ " ^ " ^ $3 }
 | exp LT exp               { $1 ^ " < " ^ $3 }
+| exp LEQ exp              { $1 ^ " <= " ^ $3 }
 | exp GT exp               { $1 ^ " > " ^ $3 }
+| exp GEQ exp              { $1 ^ " >= " ^ $3 }
 | exp EQ exp               { $1 ^ " == " ^ $3 }
 | exp NEQ exp              { $1 ^ " != " ^ $3 }
+| exp AMPAMP exp           { $1 ^ " && " ^ $3 }
 | ID ID                    { $1 ^ " " ^ $2 }
 | exp COMMA exp            { $1 ^ ", " ^ $3 }
 ;

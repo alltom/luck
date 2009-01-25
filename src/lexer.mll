@@ -21,6 +21,7 @@ rule token = parse
 | "true"                   { BOOL(true) }
 | "false"                  { BOOL(false) }
 | ';'                      { SEMICOLON }
+| "return"                 { RETURN }
 | "fun"                    { FUN }
 | "public"                 { PUBLIC }
 | "class"                  { CLASS }
@@ -31,6 +32,7 @@ rule token = parse
 | "for"                    { FOR }
 | "." digit+
 | digit+ "." digit* as num { FLOAT (float_of_string num) }
+| "0x" digit+ as num       { INT (int_of_string num) }
 | digit+ as num            { INT (int_of_string num) }
 | ident as name            { ID(name) }
 | "-=>"                    { MINUSCHUCK }

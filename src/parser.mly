@@ -6,7 +6,7 @@ let parse_error s = print_endline s
 %}
 
 %token SEMICOLON PERIOD
-%token CHUCK UPCHUCK
+%token CHUCK UPCHUCK ATCHUCK
 %token DOLLAR CCOLON SPORK BANG
 %token LARROWS RARROWS
 %token LPAREN RPAREN LBRACE RBRACE LBRACK RBRACK EQ NEQ
@@ -19,7 +19,7 @@ let parse_error s = print_endline s
 %token PLUS MINUS MULTIPLY DIVIDE LT GT CARET
 %token PLUSPLUS MINUSMINUS
 
-%left CHUCK UPCHUCK
+%left CHUCK UPCHUCK ATCHUCK
 %left COMMA
 %left EQ NEQ LT GT
 %left PLUS MINUS
@@ -94,7 +94,8 @@ contained_exp:
 | FLOAT                             { string_of_float $1 }
 | ID                                { $1 }
 | STRING                            { "\"" ^ $1 ^ "\"" }
-| LPAREN exp RPAREN { "(" ^ $2 ^ ")" }
+| LPAREN exp RPAREN                 { "(" ^ $2 ^ ")" }
+| LBRACK exp RBRACK                 { "[" ^ $2 ^ "]" }
 | contained_exp PERIOD ID           { "(" ^ $1 ^ "." ^ $3 ^ ")" }
 | MINUS contained_exp %prec NEG     { "-(" ^ $2 ^ ")" }
 | BANG contained_exp %prec NEG      { "!(" ^ $2 ^ ")" }
@@ -108,6 +109,7 @@ contained_exp:
 uncontained_exp:
   exp CHUCK exp            { $1 ^ " => " ^ $3 }
 | exp UPCHUCK exp          { $1 ^ " =^ " ^ $3 }
+| exp ATCHUCK exp          { $1 ^ " @=> " ^ $3 }
 | exp DOLLAR typ           { $1 ^ " $ " ^ $3 }
 | exp CCOLON typ           { $1 ^ "::" ^ $3 }
 | SPORK exp                { "spork ~ " ^ $2 }

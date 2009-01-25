@@ -33,6 +33,7 @@ rule token = parse
 | ident as name            { ID(name) }
 | "=>"                     { CHUCK }
 | "=^"                     { UPCHUCK }
+| "@=>"                    { ATCHUCK }
 | '@'                      { AT }
 | '$'                      { DOLLAR }
 | "::"                     { CCOLON }

@@ -25,8 +25,8 @@ let parse_error s = print_endline s
 %left IFX
 %left ELSE
 %left PRECPAREN
-%left PERIOD
 %left LPAREN LBRACK
+%left PERIOD
 
 %start input
 %type <unit> input
@@ -120,6 +120,7 @@ contained_exp:
 | contained_exp PERIOD ID           { $1 ^ "." ^ $3 }
 | MINUS contained_exp %prec NEG     { "-" ^ $2 }
 | contained_exp LPAREN exp RPAREN { $1 ^ "(" ^ $3 ^ ")" }
+| contained_exp LPAREN RPAREN { $1 ^ "()" }
 | contained_exp LBRACK exp RBRACK  { $1 ^ "[" ^ $3 ^ "]" }
 ;
 

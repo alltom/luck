@@ -117,10 +117,10 @@ contained_exp:
   NUM                               { string_of_float $1 }
 | ID                                { $1 }
 | LPAREN exp RPAREN %prec PRECPAREN { "(" ^ $2 ^ ")" }
-| contained_exp PERIOD ID           { $1 ^ "." ^ $3 }
-| MINUS contained_exp %prec NEG     { "-" ^ $2 }
+| contained_exp PERIOD ID           { "(" ^ $1 ^ "." ^ $3 ^ ")" }
+| MINUS contained_exp %prec NEG     { "-(" ^ $2 ^ ")" }
 | contained_exp LPAREN exp RPAREN { $1 ^ "(" ^ $3 ^ ")" }
-| contained_exp LPAREN RPAREN { $1 ^ "()" }
+| contained_exp LPAREN RPAREN { "(" ^ $1 ^ "())" }
 | contained_exp LBRACK exp RBRACK  { $1 ^ "[" ^ $3 ^ "]" }
 ;
 

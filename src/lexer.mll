@@ -29,6 +29,7 @@ rule token = parse
 | ident as name            { ID(name) }
 | "=>"                     { CHUCK }
 | '@'                      { AT }
+| '$'                      { DOLLAR }
 | '+'                      { PLUS }
 | '-'                      { MINUS }
 | '*'                      { MULTIPLY }

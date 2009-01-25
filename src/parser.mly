@@ -6,7 +6,7 @@ let parse_error s = print_endline s
 %}
 
 %token SEMICOLON PERIOD
-%token CHUCK
+%token CHUCK DOLLAR
 %token LPAREN RPAREN LBRACE RBRACE LBRACK RBRACK EQ NEQ
 %token COMMA AT
 %token WHILE IF ELSE FUN PUBLIC CLASS EXTENDS
@@ -20,6 +20,7 @@ let parse_error s = print_endline s
 %left PLUS MINUS
 %left MULTIPLY DIVIDE
 %right CARET
+%nonassoc DOLLAR
 %left NEG
 %left SUBSC
 %left IFX
@@ -126,6 +127,7 @@ contained_exp:
 
 uncontained_exp:
   exp CHUCK exp            { $1 ^ " => " ^ $3 }
+| exp DOLLAR typ           { $1 ^ " $ " ^ $3 }
 | exp PLUS exp             { $1 ^ " + " ^ $3 }
 | exp MINUS exp            { $1 ^ " - " ^ $3 }
 | exp MULTIPLY exp         { $1 ^ " * " ^ $3 }

@@ -15,6 +15,7 @@ let ident = ['a'-'z' 'A'-'Z'] ['a'-'z' 'A'-'Z' '0'-'9']*
 rule token = parse
   [' ' '\t']               { token lexbuf }
 | '\n'                     { incr_lineno lexbuf; token lexbuf }
+| "//" [^'\n']*            { token lexbuf }
 | ';'                      { SEMICOLON }
 | "fun"                    { FUN }
 | "public"                 { PUBLIC }

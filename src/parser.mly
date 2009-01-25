@@ -42,9 +42,9 @@ let parse_error s = print_endline s
 
 input:
 /* empty */ { }
-| input line { print_endline $2 }
-| input func { print_endline $2 }
-| input clas { print_endline $2 }
+| input line { print_endline $2 } /* code */
+| input func { print_endline $2 } /* function definition */
+| input clas { print_endline $2 } /* class definition */
 ;
 
 lines:
@@ -52,13 +52,7 @@ lines:
 | lines line { $1 ^ " " ^ $2 }
 ;
 
-claslines:
-  line { $1 }
-| func { $1 }
-| claslines line { $1 ^ " " ^ $2 }
-| claslines func { $2 }
-;
-
+/* one line of code, or a block */
 blockornot:
   line { "*{" ^ $1 ^ "}" }
 | block { $1 }
@@ -69,18 +63,13 @@ block:
 | LBRACE RBRACE { "{ }" }
 ;
 
-clasblock:
-  LBRACE claslines RBRACE { "{" ^ $2 ^ "}" }
-| LBRACE RBRACE { "{ }" }
-;
-
 line:
   SEMICOLON { ";" }
+| exp SEMICOLON { $1 ^ ";" }
 | LARROWS exp RARROWS SEMICOLON { "<<< " ^ $2 ^ " >>>;" }
 | WHILE LPAREN exp RPAREN blockornot { "while(" ^ $3 ^ ") " ^ $5 }
 | IF LPAREN exp RPAREN blockornot %prec IFX { "if(" ^ $3 ^ ") " ^ $5 }
 | IF LPAREN exp RPAREN blockornot ELSE blockornot { "if(" ^ $3 ^ ") " ^ $5 ^ " else " ^ $7 }
-| exp SEMICOLON { $1 ^ ";" }
 ;
 
 typ:
@@ -88,33 +77,6 @@ typ:
 | typ AT { $1 ^ "@" }
 | typ LBRACK RBRACK { $1 ^ "[]" }
 | typ LBRACK exp RBRACK { $1 ^ "[" ^ $3 ^ "]" }
-;
-
-paramlist:
-  typ ID { $1 ^ " " ^ $2 }
-| paramlist COMMA typ ID { $1 ^ ", " ^ $3 ^ " " ^ $4 }
-
-func:
-  FUN typ ID LPAREN RPAREN block { "fun " ^ $2 ^ " " ^ $3 ^ "() " ^ $6 }
-| FUN typ ID LPAREN paramlist RPAREN block { "fun " ^ $2 ^ " " ^ $3 ^ "(" ^ $5 ^ ") " ^ $7 }
-;
-
-id_list:
-  ID { $1 }
-| id_list COMMA ID { $1 ^ ", " ^ $3 }
-
-extend:
-  EXTENDS id_list { "extends " ^ $2 }
-;
-
-pub:
-  { "" }
-| PUBLIC { "public " }
-;
-
-clas:
-  pub CLASS ID clasblock { $1 ^ "class " ^ $3 ^ " " ^ $4 }
-| pub CLASS ID extend clasblock { $1 ^ "class " ^ $3 ^ " " ^ $4 ^ " " ^ $5 }
 ;
 
 exp:
@@ -152,6 +114,49 @@ uncontained_exp:
 | exp NEQ exp              { $1 ^ " != " ^ $3 }
 | ID ID                    { $1 ^ " " ^ $2 }
 | exp COMMA exp            { $1 ^ ", " ^ $3 }
+;
+
+/* FUNCTIONS */
+
+paramlist:
+  typ ID { $1 ^ " " ^ $2 }
+| paramlist COMMA typ ID { $1 ^ ", " ^ $3 ^ " " ^ $4 }
+
+func:
+  FUN typ ID LPAREN RPAREN block { "fun " ^ $2 ^ " " ^ $3 ^ "() " ^ $6 }
+| FUN typ ID LPAREN paramlist RPAREN block { "fun " ^ $2 ^ " " ^ $3 ^ "(" ^ $5 ^ ") " ^ $7 }
+;
+
+/* CLASSES */
+
+id_list:
+  ID { $1 }
+| id_list COMMA ID { $1 ^ ", " ^ $3 }
+
+extend:
+  EXTENDS id_list { "extends " ^ $2 }
+;
+
+pub:
+  { "" }
+| PUBLIC { "public " }
+;
+
+clasblock:
+  LBRACE claslines RBRACE { "{" ^ $2 ^ "}" }
+| LBRACE RBRACE { "{ }" }
+;
+
+claslines:
+  line { $1 }
+| func { $1 }
+| claslines line { $1 ^ " " ^ $2 }
+| claslines func { $2 }
+;
+
+clas:
+  pub CLASS ID clasblock { $1 ^ "class " ^ $3 ^ " " ^ $4 }
+| pub CLASS ID extend clasblock { $1 ^ "class " ^ $3 ^ " " ^ $4 ^ " " ^ $5 }
 ;
 
 %%

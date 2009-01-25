@@ -26,7 +26,7 @@ let parse_error s = print_endline s
 %left ELSE
 %left PRECPAREN
 %left PERIOD
-%left FUNCALL ARRSUB
+%left LPAREN LBRACK
 
 %start input
 %type <unit> input
@@ -119,8 +119,8 @@ contained_exp:
 | LPAREN exp RPAREN %prec PRECPAREN { "(" ^ $2 ^ ")" }
 | contained_exp PERIOD ID           { $1 ^ "." ^ $3 }
 | MINUS contained_exp %prec NEG     { "-" ^ $2 }
-| contained_exp LPAREN exp RPAREN %prec FUNCALL { $1 ^ "(" ^ $3 ^ ")" }
-| contained_exp LBRACK exp RBRACK %prec ARRSUB  { $1 ^ "[" ^ $3 ^ "]" }
+| contained_exp LPAREN exp RPAREN { $1 ^ "(" ^ $3 ^ ")" }
+| contained_exp LBRACK exp RBRACK  { $1 ^ "[" ^ $3 ^ "]" }
 ;
 
 uncontained_exp:

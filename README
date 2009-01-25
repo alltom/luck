@@ -5,3 +5,23 @@
     an alternative ChucK interpreter
 
 
+  REQUIREMENTS
+    + ocaml, ocamllex, ocamlyacc
+         you probably installed these together
+    + omake
+         I recommend getting this through GODI
+         but I think you can download it separately
+    + luck
+         not this project, but like, actual luck
+
+
+  BUILD
+    $ cd src
+    $ omake
+
+  DO SOMETHING
+    $ ./luck
+    reads a LucK script from stdin
+       and echoes it back
+       or yells at you if it's not valid
+       so much anger!

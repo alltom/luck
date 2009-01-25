@@ -35,12 +35,12 @@ OCamlGeneratedFiles(parser.ml parser.mli lexer.ml)
 FILES[] =
    parser
    lexer
-   link
+   luck
 
-PROGRAM = link
+PROGRAM = luck
 
 .DEFAULT: $(OCamlProgram $(PROGRAM), $(FILES))
 
 .PHONY: clean
 clean:
-   rm -f *.omc *.cm? *.run lexer.ml parser.ml parser.mli parser.output link
+   rm -f *.omc *.cm? *.run lexer.ml parser.ml parser.mli parser.output luck

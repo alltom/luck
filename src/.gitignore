@@ -6,4 +6,4 @@ lexer.ml
 parser.ml
 parser.mli
 parser.output
-link
+luck

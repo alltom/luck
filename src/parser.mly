@@ -12,6 +12,7 @@ let parse_error s = print_endline s
 %token WHILE IF ELSE FUN PUBLIC CLASS EXTENDS
 %token <float> NUM
 %token <string> ID
+%token <string> STRING
 %token PLUS MINUS MULTIPLY DIVIDE LT GT CARET
 
 %left CHUCK
@@ -119,6 +120,7 @@ exp:
 contained_exp:
   NUM                               { string_of_float $1 }
 | ID                                { $1 }
+| STRING                            { "\"" ^ $1 ^ "\"" }
 | LPAREN exp RPAREN %prec PRECPAREN { "(" ^ $2 ^ ")" }
 | contained_exp PERIOD ID           { "(" ^ $1 ^ "." ^ $3 ^ ")" }
 | MINUS contained_exp %prec NEG     { "-(" ^ $2 ^ ")" }

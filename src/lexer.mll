@@ -30,6 +30,7 @@ rule token = parse
 | "=>"                     { CHUCK }
 | '@'                      { AT }
 | '$'                      { DOLLAR }
+| "::"                     { CCOLON }
 | '+'                      { PLUS }
 | '-'                      { MINUS }
 | '*'                      { MULTIPLY }

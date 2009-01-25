@@ -25,9 +25,9 @@ rule token = parse
 | "while"                  { WHILE }
 | "if"                     { IF }
 | "else"                   { ELSE }
-| digit+
 | "." digit+
-| digit+ "." digit* as num { NUM (float_of_string num) }
+| digit+ "." digit* as num { FLOAT (float_of_string num) }
+| digit+ as num            { INT (int_of_string num) }
 | ident as name            { ID(name) }
 | "=>"                     { CHUCK }
 | '@'                      { AT }

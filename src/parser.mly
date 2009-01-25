@@ -10,7 +10,8 @@ let parse_error s = print_endline s
 %token LPAREN RPAREN LBRACE RBRACE LBRACK RBRACK EQ NEQ
 %token COMMA AT
 %token WHILE IF ELSE FUN PUBLIC CLASS EXTENDS
-%token <float> NUM
+%token <float> FLOAT
+%token <int> INT
 %token <string> ID
 %token <string> STRING
 %token PLUS MINUS MULTIPLY DIVIDE LT GT CARET
@@ -118,7 +119,8 @@ exp:
 | uncontained_exp { $1 }
 
 contained_exp:
-  NUM                               { string_of_float $1 }
+  INT                               { string_of_int $1 }
+| FLOAT                             { string_of_float $1 }
 | ID                                { $1 }
 | STRING                            { "\"" ^ $1 ^ "\"" }
 | LPAREN exp RPAREN %prec PRECPAREN { "(" ^ $2 ^ ")" }

@@ -61,11 +61,14 @@ let rec commas_to_list e =
 %%
 
 input:
+  units EOF { $1 }
+;
+
+units:
 /* empty */ { AST([], [], []) }
-| input statement { match $1 with AST(f, c, s) -> AST(f, c, s @ [$2]) }
-| input func { match $1 with AST(f, c, s) -> AST(f @ [$2], c, s) }
-| input clas { match $1 with AST(f, c, s) -> AST(f, c @ [$2], s) }
-| input EOF { $1 }
+| units statement { match $1 with AST(f, c, s) -> AST(f, c, s @ [$2]) }
+| units func { match $1 with AST(f, c, s) -> AST(f @ [$2], c, s) }
+| units clas { match $1 with AST(f, c, s) -> AST(f, c @ [$2], s) }
 ;
 
 statements:

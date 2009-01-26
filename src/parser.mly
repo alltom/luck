@@ -8,6 +8,13 @@ let parse_error s =
     (symbol_start_pos ()).pos_lnum
     (symbol_start_pos ()).pos_cnum
     s
+
+(* converts an expression with commas at top level to a list of the
+   sub-expressions *)
+let rec commas_to_list e =
+  match e with
+    Comma (e1, e2) -> (commas_to_list e1) @ (commas_to_list e2)
+  | _ -> [e]
 %}
 
 %token EOF
@@ -97,7 +104,6 @@ typ:
 | STATIC ID AT { Type($2, true, true, 0) }
 ;
 
-/* TODO */
 declarator:
   ID { ($1, 0) }
 | declarator LBRACK RBRACK { match $1 with (n, c) -> (n, c+1) }
@@ -126,7 +132,7 @@ contained_exp:
 | ID                                { Var($1) }
 | STRING                            { String($1) }
 | LPAREN exp RPAREN                 { $2 }
-| LBRACK exp RBRACK                 { $2 } /* TODO: wrong */
+| LBRACK exp RBRACK                 { Array(commas_to_list $2) }
 | contained_exp PERIOD ID           { Member($1, $3) }
 | MINUS contained_exp %prec NEG     { ArithNegation($2) }
 | BANG contained_exp %prec NEG      { Negation($2) }
@@ -134,7 +140,7 @@ contained_exp:
 | PLUSPLUS contained_exp            { PreInc($2) }
 | contained_exp MINUSMINUS          { PostDec($1) }
 | MINUSMINUS contained_exp          { PreDec($2) }
-| contained_exp LPAREN exp RPAREN   { FunCall($1, [$3]) } /* TODO: wrong */
+| contained_exp LPAREN exp RPAREN   { FunCall($1, (commas_to_list $3)) }
 | contained_exp LPAREN RPAREN       { FunCall($1, []) }
 | contained_exp LBRACK exp RBRACK   { Subscript($1, $3) }
 ;
@@ -164,7 +170,7 @@ uncontained_exp:
 | exp AMPAMP exp                 { BinaryAnd($1, $3) }
 | exp PIPEPIPE exp               { BinaryOr($1, $3) }
 | exp QUESTION exp COLON exp     { Trinary($1, $3, $5) }
-| typ declarator_list %prec DECL { Declaration([]) } /* TODO: wrong */
+| typ declarator_list %prec DECL { match $1 with Type(t, r, s, _) -> Declaration(List.map (fun (n, c) -> (n, Type(t, r, s, c))) $2) }
 | exp COMMA exp                  { Comma($1, $3) }
 ;
 

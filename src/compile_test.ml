@@ -76,13 +76,11 @@ let _ =
   t (es (FunCall(Var "a", [int_a]))) [("a", IntType)] [];
   t (es (FunCall(int_a, [int_b]))) [("a", IntType); ("b", IntType)] [];
   t (es (FunCall(int_a, [int_b; int_c]))) [("a", IntType); ("b", IntType); ("c", IntType)] [];
+  t (es (Cast(int_a, Type("int", false, false, [])))) [("a", IntType)] [];
+  t (es (Spork int_a)) [("a", IntType)] [];
+  t (es (Trinary(int_a, Int 1, Int 2))) [("a", IntType)] [];
+  t (es (Trinary(Int 1, int_a, Int 2))) [("a", IntType)] [];
+  t (es (Trinary(Int 1, Int 2, int_a))) [("a", IntType)] [];
+  t (es (Trinary(int_a, int_b, int_c))) [("a", IntType); ("b", IntType); ("c", IntType)] [];
   
   print_endline ("failed " ^ (string_of_int !num_failed) ^ " of " ^ (string_of_int !num_tests))
-
-(*
-  | FunCall of expr * expr list
-  | Cast of expr * typ
-  | Spork of expr
-  | Trinary of expr * expr * expr
-  | Declaration of decl
-*)

@@ -75,6 +75,12 @@ let rec extract_expr_cntxt expr =
     let (c2, e2') = extract_expr_cntxt e2 in
     ((combine_cntxts false c1 c2), f e1' e2')
   in
+  let trinary_helper e1 e2 e3 f =
+    let (c1, e1') = extract_expr_cntxt e1 in
+    let (c2, e2') = extract_expr_cntxt e2 in
+    let (c3, e3') = extract_expr_cntxt e3 in
+    ((combine_cntxts false c1 (combine_cntxts false c2 c3)), f e1' e2' e3')
+  in
   let list_helper cntxt lst f =
     let cntxt' = ref cntxt in
     let lst' = List.map
@@ -95,6 +101,9 @@ let rec extract_expr_cntxt expr =
   | Ast.FunCall (e1, args) ->
       let (c, e1') = extract_expr_cntxt e1 in
       list_helper c args (fun args' -> Ast.FunCall(e1', args'))
+  | Ast.Cast (e1, t) -> unary_helper e1 (fun e1' -> Ast.Cast (e1', t))
+  | Ast.Spork e1 -> unary_helper e1 (fun e1' -> Ast.Spork e1')
+  | Ast.Trinary (e1, e2, e3) -> trinary_helper e1 e2 e3 (fun e1' e2' e3' -> Ast.Trinary(e1', e2', e3'))
   | _ -> (Context.empty, expr)
 
 (* extract declarations from sub-expressions which aren't contained by

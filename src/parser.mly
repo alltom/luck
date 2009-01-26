@@ -62,9 +62,9 @@ let rec commas_to_list e =
 
 input:
 /* empty */ { AST([], [], []) }
-| input statement { match $1 with AST(f, c, s) -> AST(f, c, s @ [$2]) } /* code */
-| input func { AST([], [], []) } /* function definition */
-| input clas { AST([], [], []) } /* class definition */
+| input statement { match $1 with AST(f, c, s) -> AST(f, c, s @ [$2]) }
+| input func { match $1 with AST(f, c, s) -> AST(f @ [$2], c, s) }
+| input clas { match $1 with AST(f, c, s) -> AST(f, c @ [$2], s) }
 | input EOF { $1 }
 ;
 

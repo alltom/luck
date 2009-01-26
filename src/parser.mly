@@ -182,7 +182,7 @@ uncontained_exp:
 functyp:
   ID {  Type($1, false, false, 0) }
 | ID AT { Type($1, true, false, 0) }
-| typ LBRACK RBRACK { match $1 with Type(n, r, s, c) -> Type(n, r, s, c+1) }
+| functyp LBRACK RBRACK { match $1 with Type(n, r, s, c) -> Type(n, r, s, c+1) }
 ;
 
 paramlist:

@@ -39,21 +39,34 @@ let rec build_context cntxt decls =
 let combine_cntxts overwrite c1 c2 =
   c2
 
-let rec get_expr_cntxt expr =
+(* extracts declarations from expr, returning a context with the
+  declared variables, and an expr with declarations replaced by the
+  variables themselves.
+     "int a" becomes "a"
+     "int a[], b" becomes "a, b" *)
+let rec extract_expr_cntxt expr =
   match expr with
-    Ast.Declaration decls -> build_context Context.empty decls
-  | Ast.Chuck (e1, e2) -> combine_cntxts false (get_expr_cntxt e1) (get_expr_cntxt e2)
-  | _ -> Context.empty
+    Ast.Declaration decls -> (build_context Context.empty decls, expr)
+  | Ast.Chuck (e1, e2) ->
+      let (c1, e1') = extract_expr_cntxt e1 in
+      let (c2, e2') = extract_expr_cntxt e2 in
+      ((combine_cntxts false c1 c2), Ast.Chuck(e1', e2'))
+  | _ -> (Context.empty, expr)
 
 (* extract declarations from sub-expressions which aren't contained by
    the statement itself. for exaxmple, "int a" would be extracted from
    "<<< 4 => int a >>>" but not from "for(0 => int a;;);" *)
-let rec get_stmt_cntxt stmt =
+let rec extract_stmt_cntxt stmt =
   match stmt with
-    Ast.ExprStatement e -> get_expr_cntxt e
-  | Ast.Print e -> get_expr_cntxt e
-  | _ -> Context.empty
+    Ast.ExprStatement e -> let (c, e') = extract_expr_cntxt e in (c, Ast.ExprStatement e')
+  | Ast.Print e -> let (c, e') = extract_expr_cntxt e in (c, Ast.Print e')
+  | _ -> (Context.empty, stmt)
 
+(* rough outline:
+   - extract variable declarations relevant to outer context
+   - replace those declarations with the variables themselves
+   - ...
+*)
 let compile cntxt stmt =
-  let subcntxt = get_stmt_cntxt stmt in
+  let (subcntxt, stmt') = extract_stmt_cntxt stmt in
   (subcntxt, [])

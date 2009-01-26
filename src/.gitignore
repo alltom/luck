@@ -8,3 +8,4 @@ parser.mli
 parser.output
 luck
 parser_test
+compile_test

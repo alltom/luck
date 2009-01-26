@@ -34,8 +34,12 @@ OCamlGeneratedFiles(parser.ml parser.mli lexer.ml)
 
 .DEFAULT: $(OCamlProgram luck, parser lexer ast luck)
 
+TESTS[] =
+   $(OCamlProgram parser_test, parser lexer ast parser_test)
+   $(OCamlProgram compile_test, ast compile_test)
+
 .PHONY: test
-test: $(OCamlProgram parser_test, parser lexer ast parser_test)
+test: $(TESTS)
 
 .PHONY: clean
 clean:

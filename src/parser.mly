@@ -180,8 +180,10 @@ uncontained_exp:
 /* FUNCTIONS */
 
 functyp:
-  ID {  Type($1, false, false, 0) }
+  ID { Type($1, false, false, 0) }
+| STATIC ID { Type($2, false, true, 0) }
 | ID AT { Type($1, true, false, 0) }
+| STATIC ID AT { Type($2, true, true, 0) }
 | functyp LBRACK RBRACK { match $1 with Type(n, r, s, c) -> Type(n, r, s, c+1) }
 ;
 
@@ -199,7 +201,7 @@ func:
 
 id_list:
   ID { [$1] }
-| id_list COMMA ID { $3::$1 }
+| id_list COMMA ID { $1 @ [$3] }
 
 extend:
   EXTENDS id_list { $2 }

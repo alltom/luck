@@ -19,6 +19,10 @@
     $ cd src
     $ omake
 
+  TEST
+    $ omake test
+    $ ./parser_test
+
   DO SOMETHING
     $ ./luck
     reads a LucK script from stdin

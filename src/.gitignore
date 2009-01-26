@@ -7,3 +7,4 @@ parser.ml
 parser.mli
 parser.output
 luck
+parser_test

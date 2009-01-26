@@ -32,16 +32,13 @@ OCAMLYACCFLAGS += -v
 # and .mly files.
 OCamlGeneratedFiles(parser.ml parser.mli lexer.ml)
 
-FILES[] =
-   parser
-   lexer
-   ast
-   luck
+.DEFAULT: $(OCamlProgram luck, parser lexer ast luck)
 
-PROGRAM = luck
-
-.DEFAULT: $(OCamlProgram $(PROGRAM), $(FILES))
+.PHONY: test
+test: $(OCamlProgram parser_test, parser lexer ast parser_test)
 
 .PHONY: clean
 clean:
-   rm -f *.omc *.cm? *.run lexer.ml parser.ml parser.mli parser.output luck
+   rm -f *.omc *.cm? *.run \
+   lexer.ml parser.ml parser.mli parser.output \
+   luck parser_test

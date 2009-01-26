@@ -68,4 +68,4 @@ type func =
 type clas =
   Class of bool * string * string list * func list * expr list
 
-type ast = func list * clas list * expr list
+type ast = AST of func list * clas list * expr list

@@ -1,6 +1,7 @@
 %{
 open Printf
 open Lexing
+open Ast
 
 let parse_error s =
   printf "syntax error at line %d, character %d: %s\n"
@@ -9,6 +10,7 @@ let parse_error s =
     s
 %}
 
+%token EOF
 %token SEMICOLON PERIOD
 %token CHUCK UNCHUCK UPCHUCK ATCHUCK MINUSCHUCK PLUSCHUCK
 %token DOLLAR CCOLON SPORK BANG QUESTION COLON
@@ -47,15 +49,16 @@ let parse_error s =
 %left PERIOD
 
 %start input
-%type <unit> input
+%type <Ast.ast> input
 
 %%
 
 input:
-/* empty */ { }
-| input line { print_endline $2 } /* code */
-| input func { print_endline $2 } /* function definition */
-| input clas { print_endline $2 } /* class definition */
+/* empty */ { AST([], [], []) }
+| input line { print_endline "line"; AST([], [], []) } /* code */
+| input func { AST([], [], []) } /* function definition */
+| input clas { AST([], [], []) } /* class definition */
+| input EOF { $1 }
 ;
 
 lines:

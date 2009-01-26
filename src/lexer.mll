@@ -77,4 +77,4 @@ rule token = parse
 | '!'                      { BANG }
 | '?'                      { QUESTION }
 | ':'                      { COLON }
-| eof                      { raise End_of_file }
+| eof                      { EOF }

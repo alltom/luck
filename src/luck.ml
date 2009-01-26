@@ -1,10 +1,11 @@
 
+open Ast
+
 let main () =
   try
-    let lexbuf = Lexing.from_channel stdin in
-    while true do
-      Parser.input Lexer.token lexbuf
-    done
-  with End_of_file -> exit 0 | Parsing.Parse_error -> exit 1
+    let tree = Parser.input Lexer.token (Lexing.from_channel stdin) in
+    ignore(tree);
+    print_endline "done!"
+  with Parsing.Parse_error -> exit 1
 
-let _ = Printexc.print main ()
+let _ = main ()

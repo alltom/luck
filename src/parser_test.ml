@@ -91,7 +91,7 @@ let _ =
   t "a @=> b;" [] [] [es (Atchuck(a, b))];
   t "a -=> b;" [] [] [es (Minuschuck(a, b))];
   t "a +=> b;" [] [] [es (Pluschuck(a, b))];
-  t "a $ b;" [] [] [es (Cast(a, Type("b", false, false, 0)))];
+  t "a $ b;" [] [] [es (Cast(a, Type("b", false, false, [])))];
   t "a :: b;" [] [] [es (Time(a, b))];
   t "spork ~ a();" [] [] [es (Spork(FunCall(a, [])))];
   t "a + b;" [] [] [es (Plus(a, b))];
@@ -109,30 +109,32 @@ let _ =
   t "a && b;" [] [] [es (BinaryAnd(a, b))];
   t "a || b;" [] [] [es (BinaryOr(a, b))];
   t "a ? b : c;" [] [] [es (Trinary(a, b, c))];
-  t "int a;" [] [] [es (Declaration([("a", Type("int", false, false, 0))]))];
-  t "int @ a;" [] [] [es (Declaration([("a", Type("int", true, false, 0))]))];
-  t "int a[];" [] [] [es (Declaration([("a", Type("int", false, false, 1))]))];
-  t "int a[][];" [] [] [es (Declaration([("a", Type("int", false, false, 2))]))];
-  t "int @ a[][];" [] [] [es (Declaration([("a", Type("int", true, false, 2))]))];
-  t "int @ a[][], b;" [] [] [es (Declaration([("a", Type("int", true, false, 2)); ("b", Type("int", true, false, 0))]))];
-  t "int @ a[][], b[][][];" [] [] [es (Declaration([("a", Type("int", true, false, 2)); ("b", Type("int", true, false, 3))]))];
+  t "int a;" [] [] [es (Declaration([("a", Type("int", false, false, []))]))];
+  t "int @ a;" [] [] [es (Declaration([("a", Type("int", true, false, []))]))];
+  t "int a[];" [] [] [es (Declaration([("a", Type("int", false, false, [Dynamic]))]))];
+  t "int a[b];" [] [] [es (Declaration([("a", Type("int", false, false, [Fixed b]))]))];
+  t "int a[][];" [] [] [es (Declaration([("a", Type("int", false, false, [Dynamic; Dynamic]))]))];
+  t "int a[b][c];" [] [] [es (Declaration([("a", Type("int", false, false, [Fixed b; Fixed c]))]))];
+  t "int @ a[][];" [] [] [es (Declaration([("a", Type("int", true, false, [Dynamic; Dynamic]))]))];
+  t "int @ a[][], b;" [] [] [es (Declaration([("a", Type("int", true, false, [Dynamic; Dynamic])); ("b", Type("int", true, false, []))]))];
+  t "int @ a[][], b[][][];" [] [] [es (Declaration([("a", Type("int", true, false, [Dynamic; Dynamic])); ("b", Type("int", true, false, [Dynamic; Dynamic; Dynamic]))]))];
   t "a, b;" [] [] [es (Comma(a, b))];
   t "a, b, c;" [] [] [es (Comma(Comma(a, b), c))];
   
   (* fair-weather functions *)
-  t "fun a b(){}" [Function(Type("a", false, false, 0), "b", [], [])] [] [];
-  t "fun a[] b(){}" [Function(Type("a", false, false, 1), "b", [], [])] [] [];
-  t "fun a @ [] b(){}" [Function(Type("a", true, false, 1), "b", [], [])] [] [];
-  t "fun a @ [][] b(){}" [Function(Type("a", true, false, 2), "b", [], [])] [] [];
-  t "fun static a b(){}" [Function(Type("a", false, true, 0), "b", [], [])] [] [];
-  t "fun static a @ [][] b(){}" [Function(Type("a", true, true, 2), "b", [], [])] [] [];
-  t "fun a b(c d){}" [Function(Type("a", false, false, 0), "b", [("d", Type("c", false, false, 0))], [])] [] [];
-  t "fun a b(c d, e f){}" [Function(Type("a", false, false, 0), "b", [("d", Type("c", false, false, 0)); ("f", Type("e", false, false, 0))], [])] [] [];
-  t "fun a b(c @ d){}" [Function(Type("a", false, false, 0), "b", [("d", Type("c", true, false, 0))], [])] [] [];
-  t "fun a b(c d, e @ f){}" [Function(Type("a", false, false, 0), "b", [("d", Type("c", false, false, 0)); ("f", Type("e", true, false, 0))], [])] [] [];
-  t "fun a b(c d[], e @ f){}" [Function(Type("a", false, false, 0), "b", [("d", Type("c", false, false, 1)); ("f", Type("e", true, false, 0))], [])] [] [];
-  t "fun a b(){a;}" [Function(Type("a", false, false, 0), "b", [], [es a])] [] [];
-  t "fun a b(){a;b;}" [Function(Type("a", false, false, 0), "b", [], [es a; es b])] [] [];
+  t "fun a b(){}" [Function(Type("a", false, false, []), "b", [], [])] [] [];
+  t "fun a[] b(){}" [Function(Type("a", false, false, [Dynamic]), "b", [], [])] [] [];
+  t "fun a @ [] b(){}" [Function(Type("a", true, false, [Dynamic]), "b", [], [])] [] [];
+  t "fun a @ [][] b(){}" [Function(Type("a", true, false, [Dynamic; Dynamic]), "b", [], [])] [] [];
+  t "fun static a b(){}" [Function(Type("a", false, true, []), "b", [], [])] [] [];
+  t "fun static a @ [][] b(){}" [Function(Type("a", true, true, [Dynamic; Dynamic]), "b", [], [])] [] [];
+  t "fun a b(c d){}" [Function(Type("a", false, false, []), "b", [("d", Type("c", false, false, []))], [])] [] [];
+  t "fun a b(c d, e f){}" [Function(Type("a", false, false, []), "b", [("d", Type("c", false, false, [])); ("f", Type("e", false, false, []))], [])] [] [];
+  t "fun a b(c @ d){}" [Function(Type("a", false, false, []), "b", [("d", Type("c", true, false, []))], [])] [] [];
+  t "fun a b(c d, e @ f){}" [Function(Type("a", false, false, []), "b", [("d", Type("c", false, false, [])); ("f", Type("e", true, false, []))], [])] [] [];
+  t "fun a b(c d[], e @ f){}" [Function(Type("a", false, false, []), "b", [("d", Type("c", false, false, [Dynamic])); ("f", Type("e", true, false, []))], [])] [] [];
+  t "fun a b(){a;}" [Function(Type("a", false, false, []), "b", [], [es a])] [] [];
+  t "fun a b(){a;b;}" [Function(Type("a", false, false, []), "b", [], [es a; es b])] [] [];
   
   (* fair-weather classes *)
   t "class a { }" [] [Class(false, "a", [], [], [])] [];
@@ -143,30 +145,30 @@ let _ =
   t "public class a extends b, c, d { }" [] [Class(true, "a", ["b"; "c"; "d"], [], [])] [];
   t "class a { b; }" [] [Class(false, "a", [], [], [es b])] [];
   t "class a { b; c; }" [] [Class(false, "a", [], [], [es b; es c])] [];
-  t "class a { fun b c(){} }" [] [Class(false, "a", [], [Function(Type("b", false, false, 0), "c", [], [])], [])] [];
-  t "class a { fun b c(){} d; }" [] [Class(false, "a", [], [Function(Type("b", false, false, 0), "c", [], [])], [es d])] [];
-  t "class a { d; fun b c(){} }" [] [Class(false, "a", [], [Function(Type("b", false, false, 0), "c", [], [])], [es d])] [];
-  t "class a { fun b c(){} d; e; }" [] [Class(false, "a", [], [Function(Type("b", false, false, 0), "c", [], [])], [es d; es e])] [];
-  t "class a { d; fun b c(){} e; }" [] [Class(false, "a", [], [Function(Type("b", false, false, 0), "c", [], [])], [es d; es e])] [];
-  t "class a { d; e; fun b c(){} }" [] [Class(false, "a", [], [Function(Type("b", false, false, 0), "c", [], [])], [es d; es e])] [];
+  t "class a { fun b c(){} }" [] [Class(false, "a", [], [Function(Type("b", false, false, []), "c", [], [])], [])] [];
+  t "class a { fun b c(){} d; }" [] [Class(false, "a", [], [Function(Type("b", false, false, []), "c", [], [])], [es d])] [];
+  t "class a { d; fun b c(){} }" [] [Class(false, "a", [], [Function(Type("b", false, false, []), "c", [], [])], [es d])] [];
+  t "class a { fun b c(){} d; e; }" [] [Class(false, "a", [], [Function(Type("b", false, false, []), "c", [], [])], [es d; es e])] [];
+  t "class a { d; fun b c(){} e; }" [] [Class(false, "a", [], [Function(Type("b", false, false, []), "c", [], [])], [es d; es e])] [];
+  t "class a { d; e; fun b c(){} }" [] [Class(false, "a", [], [Function(Type("b", false, false, []), "c", [], [])], [es d; es e])] [];
 
   (* fair-weather mixtures *)
   t "a; b;" [] [] [es a; es b];
-  t "fun a b(){} fun c d(){}" [Function(Type("a", false, false, 0), "b", [], []); Function(Type("c", false, false, 0), "d", [], [])] [] [];
+  t "fun a b(){} fun c d(){}" [Function(Type("a", false, false, []), "b", [], []); Function(Type("c", false, false, []), "d", [], [])] [] [];
   t "class a { } class b { }" [] [Class(false, "a", [], [], []); Class(false, "b", [], [], [])] [];
-  t "a; fun a b(){}" [Function(Type("a", false, false, 0), "b", [], [])] [] [es a];
-  t "fun a b(){} a;" [Function(Type("a", false, false, 0), "b", [], [])] [] [es a];
+  t "a; fun a b(){}" [Function(Type("a", false, false, []), "b", [], [])] [] [es a];
+  t "fun a b(){} a;" [Function(Type("a", false, false, []), "b", [], [])] [] [es a];
   t "a; class a { }" [] [Class(false, "a", [], [], [])] [es a];
   t "class a { } a;" [] [Class(false, "a", [], [], [])] [es a];
-  t "fun a b(){} class a { }" [Function(Type("a", false, false, 0), "b", [], [])] [Class(false, "a", [], [], [])] [];
-  t "class a { } fun a b(){}" [Function(Type("a", false, false, 0), "b", [], [])] [Class(false, "a", [], [], [])] [];
-  t "a; class a { } fun a b(){}" [Function(Type("a", false, false, 0), "b", [], [])] [Class(false, "a", [], [], [])] [es a];
-  t "a; fun a b(){} class a { }" [Function(Type("a", false, false, 0), "b", [], [])] [Class(false, "a", [], [], [])] [es a];
-  t "class a { } a; fun a b(){}" [Function(Type("a", false, false, 0), "b", [], [])] [Class(false, "a", [], [], [])] [es a];
-  t "fun a b(){} a; class a { }" [Function(Type("a", false, false, 0), "b", [], [])] [Class(false, "a", [], [], [])] [es a];
-  t "class a { } fun a b(){} a;" [Function(Type("a", false, false, 0), "b", [], [])] [Class(false, "a", [], [], [])] [es a];
-  t "fun a b(){} class a { } a;" [Function(Type("a", false, false, 0), "b", [], [])] [Class(false, "a", [], [], [])] [es a];
-  t "class a { fun b c(){} fun d e(){} }" [] [Class(false, "a", [], [Function(Type("b", false, false, 0), "c", [], []); Function(Type("d", false, false, 0), "e", [], [])], [])] [];
+  t "fun a b(){} class a { }" [Function(Type("a", false, false, []), "b", [], [])] [Class(false, "a", [], [], [])] [];
+  t "class a { } fun a b(){}" [Function(Type("a", false, false, []), "b", [], [])] [Class(false, "a", [], [], [])] [];
+  t "a; class a { } fun a b(){}" [Function(Type("a", false, false, []), "b", [], [])] [Class(false, "a", [], [], [])] [es a];
+  t "a; fun a b(){} class a { }" [Function(Type("a", false, false, []), "b", [], [])] [Class(false, "a", [], [], [])] [es a];
+  t "class a { } a; fun a b(){}" [Function(Type("a", false, false, []), "b", [], [])] [Class(false, "a", [], [], [])] [es a];
+  t "fun a b(){} a; class a { }" [Function(Type("a", false, false, []), "b", [], [])] [Class(false, "a", [], [], [])] [es a];
+  t "class a { } fun a b(){} a;" [Function(Type("a", false, false, []), "b", [], [])] [Class(false, "a", [], [], [])] [es a];
+  t "fun a b(){} class a { } a;" [Function(Type("a", false, false, []), "b", [], [])] [Class(false, "a", [], [], [])] [es a];
+  t "class a { fun b c(){} fun d e(){} }" [] [Class(false, "a", [], [Function(Type("b", false, false, []), "c", [], []); Function(Type("d", false, false, []), "e", [], [])], [])] [];
 
   (* little precedence things *)
   t "a + b * c;" [] [] [es (Plus(a, Multiply(b, c)))];

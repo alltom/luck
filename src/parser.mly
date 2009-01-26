@@ -101,16 +101,16 @@ statement:
 ;
 
 typ:
-  ID { Type($1, false, false, 0) }
-| ID AT { Type($1, true, false, 0) }
-| STATIC ID { Type($2, false, true, 0) }
-| STATIC ID AT { Type($2, true, true, 0) }
+  ID { Type($1, false, false, []) }
+| ID AT { Type($1, true, false, []) }
+| STATIC ID { Type($2, false, true, []) }
+| STATIC ID AT { Type($2, true, true, []) }
 ;
 
 declarator:
-  ID { ($1, 0) }
-| declarator LBRACK RBRACK { match $1 with (n, c) -> (n, c+1) }
-| declarator LBRACK exp RBRACK { match $1 with (n, c) -> (n, c+1) }
+  ID { ($1, []) }
+| declarator LBRACK RBRACK { match $1 with (n, c) -> (n, c @ [Dynamic]) }
+| declarator LBRACK exp RBRACK { match $1 with (n, c) -> (n, c @ [Fixed $3]) }
 ;
 
 declarator_list:
@@ -180,11 +180,11 @@ uncontained_exp:
 /* FUNCTIONS */
 
 functyp:
-  ID { Type($1, false, false, 0) }
-| STATIC ID { Type($2, false, true, 0) }
-| ID AT { Type($1, true, false, 0) }
-| STATIC ID AT { Type($2, true, true, 0) }
-| functyp LBRACK RBRACK { match $1 with Type(n, r, s, c) -> Type(n, r, s, c+1) }
+  ID { Type($1, false, false, []) }
+| STATIC ID { Type($2, false, true, []) }
+| ID AT { Type($1, true, false, []) }
+| STATIC ID AT { Type($2, true, true, []) }
+| functyp LBRACK RBRACK { match $1 with Type(n, r, s, c) -> Type(n, r, s, c @ [Dynamic]) }
 ;
 
 paramlist:

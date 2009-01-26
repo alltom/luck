@@ -149,7 +149,7 @@ let _ =
   t "class a { fun b c(){} d; e; }" [] [Class(false, "a", [], [Function(Type("b", false, false, 0), "c", [], [])], [es d; es e])] [];
   t "class a { d; fun b c(){} e; }" [] [Class(false, "a", [], [Function(Type("b", false, false, 0), "c", [], [])], [es d; es e])] [];
   t "class a { d; e; fun b c(){} }" [] [Class(false, "a", [], [Function(Type("b", false, false, 0), "c", [], [])], [es d; es e])] [];
-  
+
   (* fair-weather mixtures *)
   t "a; b;" [] [] [es a; es b];
   t "fun a b(){} fun c d(){}" [Function(Type("a", false, false, 0), "b", [], []); Function(Type("c", false, false, 0), "d", [], [])] [] [];
@@ -167,5 +167,11 @@ let _ =
   t "class a { } fun a b(){} a;" [Function(Type("a", false, false, 0), "b", [], [])] [Class(false, "a", [], [], [])] [es a];
   t "fun a b(){} class a { } a;" [Function(Type("a", false, false, 0), "b", [], [])] [Class(false, "a", [], [], [])] [es a];
   t "class a { fun b c(){} fun d e(){} }" [] [Class(false, "a", [], [Function(Type("b", false, false, 0), "c", [], []); Function(Type("d", false, false, 0), "e", [], [])], [])] [];
+
+  (* little precedence things *)
+  t "a + b * c;" [] [] [es (Plus(a, Multiply(b, c)))];
+  t "b * c + a;" [] [] [es (Plus(Multiply(b, c), a))];
+  t "a.b();" [] [] [es (FunCall(Member(a, "b"), []))];
+  t "-a();" [] [] [es (ArithNegation(FunCall(a, [])))];
 
   print_endline ("failed " ^ (string_of_int !num_failed) ^ " of " ^ (string_of_int !num_tests))

@@ -221,7 +221,7 @@ clasblocks:
   statement { ([], [$1]) }
 | func { ([$1], []) }
 | clasblocks statement { match $1 with (f, s) -> (f, s @ [$2]) }
-| clasblocks func { match $1 with (f, s) -> ($2::f, s) }
+| clasblocks func { match $1 with (f, s) -> (f @ [$2], s) }
 ;
 
 clas:

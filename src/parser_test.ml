@@ -149,5 +149,23 @@ let _ =
   t "class a { fun b c(){} d; e; }" [] [Class(false, "a", [], [Function(Type("b", false, false, 0), "c", [], [])], [es d; es e])] [];
   t "class a { d; fun b c(){} e; }" [] [Class(false, "a", [], [Function(Type("b", false, false, 0), "c", [], [])], [es d; es e])] [];
   t "class a { d; e; fun b c(){} }" [] [Class(false, "a", [], [Function(Type("b", false, false, 0), "c", [], [])], [es d; es e])] [];
+  
+  (* fair-weather mixtures *)
+  t "a; b;" [] [] [es a; es b];
+  t "fun a b(){} fun c d(){}" [Function(Type("a", false, false, 0), "b", [], []); Function(Type("c", false, false, 0), "d", [], [])] [] [];
+  t "class a { } class b { }" [] [Class(false, "a", [], [], []); Class(false, "b", [], [], [])] [];
+  t "a; fun a b(){}" [Function(Type("a", false, false, 0), "b", [], [])] [] [es a];
+  t "fun a b(){} a;" [Function(Type("a", false, false, 0), "b", [], [])] [] [es a];
+  t "a; class a { }" [] [Class(false, "a", [], [], [])] [es a];
+  t "class a { } a;" [] [Class(false, "a", [], [], [])] [es a];
+  t "fun a b(){} class a { }" [Function(Type("a", false, false, 0), "b", [], [])] [Class(false, "a", [], [], [])] [];
+  t "class a { } fun a b(){}" [Function(Type("a", false, false, 0), "b", [], [])] [Class(false, "a", [], [], [])] [];
+  t "a; class a { } fun a b(){}" [Function(Type("a", false, false, 0), "b", [], [])] [Class(false, "a", [], [], [])] [es a];
+  t "a; fun a b(){} class a { }" [Function(Type("a", false, false, 0), "b", [], [])] [Class(false, "a", [], [], [])] [es a];
+  t "class a { } a; fun a b(){}" [Function(Type("a", false, false, 0), "b", [], [])] [Class(false, "a", [], [], [])] [es a];
+  t "fun a b(){} a; class a { }" [Function(Type("a", false, false, 0), "b", [], [])] [Class(false, "a", [], [], [])] [es a];
+  t "class a { } fun a b(){} a;" [Function(Type("a", false, false, 0), "b", [], [])] [Class(false, "a", [], [], [])] [es a];
+  t "fun a b(){} class a { } a;" [Function(Type("a", false, false, 0), "b", [], [])] [Class(false, "a", [], [], [])] [es a];
+  t "class a { fun b c(){} fun d e(){} }" [] [Class(false, "a", [], [Function(Type("b", false, false, 0), "c", [], []); Function(Type("d", false, false, 0), "e", [], [])], [])] [];
 
   print_endline ("failed " ^ (string_of_int !num_failed) ^ " of " ^ (string_of_int !num_tests))

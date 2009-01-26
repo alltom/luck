@@ -22,6 +22,6 @@
   DO SOMETHING
     $ ./luck
     reads a LucK script from stdin
-       and echoes it back
+       and does nothing
        or yells at you if it's not valid
        so much anger!

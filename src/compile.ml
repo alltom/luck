@@ -4,24 +4,28 @@ exception Compile_error
 type typ =
   ArrayType of typ
 | RefType of typ
-| IntType
+| IntType | FloatType | StringType
 
 module Context = Map.Make(String)
 
-exception Type_conversion
+exception Type_declaration
 
 let rec string_of_type t =
   match t with
     ArrayType t' -> (string_of_type t') ^ "[]"
   | RefType t' -> (string_of_type t') ^ "@"
   | IntType -> "int"
+  | FloatType -> "float"
+  | StringType -> "string"
 
 let rec convert_type asttype =
   match asttype with
     Ast.Type("int", false, _, []) -> IntType
-  | Ast.Type(b, false, s, h::r) ->
-      ArrayType(convert_type (Ast.Type(b, false, s, r)))
-  | _ -> raise Type_conversion
+  | Ast.Type("float", false, _, []) -> FloatType
+  | Ast.Type("string", false, _, []) -> StringType
+  | Ast.Type(t, true, s, a) -> RefType(convert_type (Ast.Type(t, false, s, a)))
+  | Ast.Type(t, false, s, h::r) -> ArrayType(convert_type (Ast.Type(t, false, s, r)))
+  | _ -> raise Type_declaration
 
 let rec build_context cntxt decls =
   match decls with

@@ -37,7 +37,9 @@ let t stmts cntxt code =
       fail ("contexts didn't match: "
             ^ "expected " ^ (String.concat ", " (strings_of_test_cntxt cntxt)) ^ ", "
             ^ "got " ^ (String.concat ", " (strings_of_real_cntxt rescntxt)))
-  with _ -> fail "compiler exception"
+  with
+    Type_declaration -> fail "compiler error: type declaration"
+  | _ -> fail "compiler exception"
 
 let _ =
   let es e = ExprStatement(e) in
@@ -52,5 +54,9 @@ let _ =
   t (es (Declaration [("a", Type("int", false, false, []))])) [("a", IntType)] [];
   t (es (Declaration [("b", Type("int", false, false, [Dynamic]))])) [("b", ArrayType(IntType))] [];
   t (es (Declaration [("b", Type("int", false, false, [Dynamic; Dynamic]))])) [("b", ArrayType(ArrayType(IntType)))] [];
+  t (es (Declaration [("a", Type("float", false, false, []))])) [("a", FloatType)] [];
+  t (es (Declaration [("a", Type("string", false, false, []))])) [("a", StringType)] [];
+  t (es (Declaration [("a", Type("int", true, false, []))])) [("a", RefType(IntType))] [];
+  t (es (Declaration [("a", Type("int", true, false, [Dynamic]))])) [("a", RefType(ArrayType(IntType)))] [];
   
   print_endline ("failed " ^ (string_of_int !num_failed) ^ " of " ^ (string_of_int !num_tests))

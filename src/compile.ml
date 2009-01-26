@@ -75,21 +75,26 @@ let rec extract_expr_cntxt expr =
     let (c2, e2') = extract_expr_cntxt e2 in
     ((combine_cntxts false c1 c2), f e1' e2')
   in
+  let list_helper cntxt lst f =
+    let cntxt' = ref cntxt in
+    let lst' = List.map
+      (fun e ->
+         let (c', e') = extract_expr_cntxt e in
+         cntxt' := combine_cntxts false !cntxt' c';
+         e')
+      lst
+    in
+    (!cntxt', f lst')
+  in
   match expr with
     Ast.Declaration decls -> (build_context Context.empty decls, expr)
-  | Ast.Array exps ->
-      let cntxt = ref Context.empty in
-      let exps' = List.map
-        (fun e ->
-           let (c', e') = extract_expr_cntxt e in
-           cntxt := combine_cntxts false !cntxt c';
-           e')
-        exps
-      in
-      (!cntxt, (Ast.Array exps'))
+  | Ast.Array exps -> list_helper Context.empty exps (fun exps' -> Ast.Array exps')
   | Ast.UnaryExpr (op, e1) -> unary_helper e1 (fun e1' -> Ast.UnaryExpr(op, e1'))
   | Ast.BinaryExpr (op, e1, e2) -> binary_helper e1 e2 (fun e1' e2' -> Ast.BinaryExpr(op, e1', e2'))
   | Ast.Member (e1, m) -> unary_helper e1 (fun e1' -> Ast.Member(e1', m))
+  | Ast.FunCall (e1, args) ->
+      let (c, e1') = extract_expr_cntxt e1 in
+      list_helper c args (fun args' -> Ast.FunCall(e1', args'))
   | _ -> (Context.empty, expr)
 
 (* extract declarations from sub-expressions which aren't contained by

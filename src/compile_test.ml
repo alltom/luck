@@ -45,6 +45,7 @@ let t stmts cntxt code =
 let _ =
   let int_a = Declaration [("a", Type("int", false, false, []))] in
   let int_b = Declaration [("b", Type("int", false, false, []))] in
+  let int_c = Declaration [("c", Type("int", false, false, []))] in
   let es e = ExprStatement(e) in
   
   (* constant expressions with no side effects *)
@@ -71,5 +72,17 @@ let _ =
   t (es (UnaryExpr(ArithNegation, int_a))) [("a", IntType)] [];
   t (es (BinaryExpr(Chuck, Int 1, int_a))) [("a", IntType)] [];
   t (es (Member(int_a, "b"))) [("a", IntType)] [];
+  t (es (FunCall(int_a, []))) [("a", IntType)] [];
+  t (es (FunCall(Var "a", [int_a]))) [("a", IntType)] [];
+  t (es (FunCall(int_a, [int_b]))) [("a", IntType); ("b", IntType)] [];
+  t (es (FunCall(int_a, [int_b; int_c]))) [("a", IntType); ("b", IntType); ("c", IntType)] [];
   
   print_endline ("failed " ^ (string_of_int !num_failed) ^ " of " ^ (string_of_int !num_tests))
+
+(*
+  | FunCall of expr * expr list
+  | Cast of expr * typ
+  | Spork of expr
+  | Trinary of expr * expr * expr
+  | Declaration of decl
+*)

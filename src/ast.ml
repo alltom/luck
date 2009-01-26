@@ -81,3 +81,21 @@ let string_of_type (Type(name, reference, static, arrdep)) =
     ^ name
     ^ (if reference then " @ " else "")
     ^ (ncopy arrdep "[]")
+
+let ast_summary (AST(fns, classes, stmts)) =
+  let ip pref str = print_endline (pref ^ str) in
+  let function_summary pref (Function(typ, name, decl, stmts)) =
+    let p = ip pref in
+    p ("function: " ^ name);
+    p ("  type: " ^ (string_of_type typ))
+  in
+  let class_summary pref (Class(public, name, parents, fns, stmts)) =
+    let p = ip pref in
+    p ((if public then "public " else "") ^ "class: " ^ name);
+    p ("  parents: " ^ (String.concat ", " parents));
+    p "  methods:";
+    List.iter (function_summary (pref ^ "    ")) fns
+  in
+  List.iter (class_summary "") classes;
+  print_endline "functions:";
+  List.iter (function_summary "  ") fns

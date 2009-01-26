@@ -51,5 +51,6 @@ let _ =
   (* declarations should become part of the local context *)
   t (es (Declaration [("a", Type("int", false, false, []))])) [("a", IntType)] [];
   t (es (Declaration [("b", Type("int", false, false, [Dynamic]))])) [("b", ArrayType(IntType))] [];
+  t (es (Declaration [("b", Type("int", false, false, [Dynamic; Dynamic]))])) [("b", ArrayType(ArrayType(IntType)))] [];
   
   print_endline ("failed " ^ (string_of_int !num_failed) ^ " of " ^ (string_of_int !num_tests))

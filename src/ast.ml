@@ -1,6 +1,6 @@
 
-(* type: base type * reference type? * array depth *)
-type typ = string * bool * int
+(* type: base type * reference type? * static? * array depth *)
+type typ = Type of string * bool * bool * int
 
 (* declaration of one variable *)
 type vardecl = string * typ
@@ -9,7 +9,8 @@ type vardecl = string * typ
 type decl = vardecl list
 
 type expr =
-  Int of int
+  NullExpression
+| Int of int
 | Float of float
 | Bool of bool
 | String of string
@@ -30,7 +31,7 @@ type expr =
 | Atchuck of expr * expr
 | Minuschuck of expr * expr
 | Pluschuck of expr * expr
-| Cast of expr * expr
+| Cast of expr * typ
 | Time of expr * expr
 | Spork of expr
 | Plus of expr * expr
@@ -38,7 +39,7 @@ type expr =
 | Multiply of expr * expr
 | Divide of expr * expr
 | Modulo of expr * expr
-| Exponent of expr * expr
+| Exponentiate of expr * expr
 | LessThan of expr * expr
 | LessThanOrEqualTo of expr * expr
 | GreaterThan of expr * expr
@@ -49,23 +50,25 @@ type expr =
 | BinaryOr of expr * expr
 | Trinary of expr * expr * expr
 | Declaration of decl
-| Commas of expr * expr
+| Comma of expr * expr
 
 type stmt =
-  ValuedReturn of expr
+  NullStatement
+| ExprStatement of expr
+| ValuedReturn of expr
 | Return
 | Print of expr
-| While of expr * expr list
-| Do of expr * expr list
-| Until of expr * expr list
-| If of expr * expr list * expr list
-| For of expr * expr * expr * expr list
+| While of expr * stmt list
+| Do of stmt list * expr
+| Until of expr * stmt list
+| If of expr * stmt list * stmt list
+| For of expr * expr * expr * stmt list
 
 type func =
-  Function of typ * string * decl * expr list
+  Function of typ * string * decl * stmt list
 
-(* public? * name * extended classes * functions * body expressions *)
+(* public? * name * extended classes * functions * body statements *)
 type clas =
-  Class of bool * string * string list * func list * expr list
+  Class of bool * string * string list * func list * stmt list
 
-type ast = AST of func list * clas list * expr list
+type ast = AST of func list * clas list * stmt list

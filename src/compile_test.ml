@@ -35,8 +35,8 @@ let t stmts cntxt code =
        else fail "code didn't match")
     else
       fail ("contexts didn't match: "
-            ^ "expected " ^ (String.concat ", " (strings_of_test_cntxt cntxt)) ^ ", "
-            ^ "got " ^ (String.concat ", " (strings_of_real_cntxt rescntxt)))
+            ^ "expected [" ^ (String.concat ", " (strings_of_test_cntxt cntxt)) ^ "], "
+            ^ "got [" ^ (String.concat ", " (strings_of_real_cntxt rescntxt)) ^ "]")
   with
     Type_declaration -> fail "compiler error: type declaration"
   | _ -> fail "compiler exception"
@@ -62,5 +62,6 @@ let _ =
 
   (* nested declarations should become part of the local context *)
   t (es (Chuck(Int 1, Declaration [("a", Type("int", false, false, []))]))) [("a", IntType)] [];
+  t (es (Chuck(Declaration [("a", Type("int", false, false, []))], Int 1))) [("a", IntType)] [];
   
   print_endline ("failed " ^ (string_of_int !num_failed) ^ " of " ^ (string_of_int !num_tests))

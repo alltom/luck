@@ -17,6 +17,7 @@ module Context = Map.Make(String)
 
 exception Type_declaration
 exception Variable_initialization
+exception Redeclaration
 
 let rec string_of_type t =
   match t with
@@ -45,13 +46,19 @@ let rec build_context cntxt decls =
   match decls with
     (name, t) :: rest ->
       build_context (Context.add name (instantiate_type t) cntxt) rest
-    | [] -> cntxt
+  | [] -> cntxt
 
 (* if overwrite is true, variables in c2 overwrite those in c2.
    otherwise, an exception is thrown if the same variable is
    defined in both contexts *)
 let combine_cntxts overwrite c1 c2 =
-  c2
+  let add name entry c' =
+    if not overwrite && (Context.mem name c') then
+      raise Redeclaration
+    else
+      Context.add name entry c'
+  in
+  Context.fold add c1 c2
 
 (* extracts declarations from expr, returning a context with the
   declared variables, and an expr with declarations replaced by the

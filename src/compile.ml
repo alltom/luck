@@ -66,6 +66,10 @@ let combine_cntxts overwrite c1 c2 =
      "int a" becomes "a"
      "int a[], b" becomes "a, b" *)
 let rec extract_expr_cntxt expr =
+  let unary_helper e1 f =
+    let (c, e') = extract_expr_cntxt e1 in
+    (c, f e')
+  in
   let binary_helper e1 e2 f =
     let (c1, e1') = extract_expr_cntxt e1 in
     let (c2, e2') = extract_expr_cntxt e2 in
@@ -83,6 +87,13 @@ let rec extract_expr_cntxt expr =
         exps
       in
       (!cntxt, (Ast.Array exps'))
+  | Ast.ArithNegation e1 -> unary_helper e1 (fun e1' -> Ast.ArithNegation(e1'))
+  | Ast.Negation e1 -> unary_helper e1 (fun e1' -> Ast.Negation(e1'))
+  | Ast.PreInc e1 -> unary_helper e1 (fun e1' -> Ast.PreInc(e1'))
+  | Ast.PostInc e1 -> unary_helper e1 (fun e1' -> Ast.PostInc(e1'))
+  | Ast.PreDec e1 -> unary_helper e1 (fun e1' -> Ast.PreDec(e1'))
+  | Ast.PostDec e1 -> unary_helper e1 (fun e1' -> Ast.PostDec(e1'))
+  | Ast.Member (e1, m) -> unary_helper e1 (fun e1' -> Ast.Member(e1', m))
   | Ast.Chuck (e1, e2) -> binary_helper e1 e2 (fun e1' e2' -> Ast.Chuck(e1', e2'))
   | Ast.Plus (e1, e2) -> binary_helper e1 e2 (fun e1' e2' -> Ast.Plus(e1', e2'))
   | _ -> (Context.empty, expr)

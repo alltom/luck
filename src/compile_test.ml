@@ -48,11 +48,13 @@ let _ =
   let es e = ExprStatement(e) in
   
   (* constant expressions with no side effects *)
+  print_endline "  constant expressions";
   t NullStatement [] [];
   t (es (Int 1)) [] [];
   t (es (Plus(Int 1, Int 2))) [] [];
   
   (* simple declarations should become part of the local context *)
+  print_endline "  simple declarations";
   t (es (int_a)) [("a", IntType)] [];
   t (es (Declaration [("b", Type("int", false, false, [Dynamic]))])) [("b", ArrayType(IntType))] [];
   t (es (Declaration [("b", Type("int", false, false, [Dynamic; Dynamic]))])) [("b", ArrayType(ArrayType(IntType)))] [];
@@ -63,8 +65,16 @@ let _ =
   t (es (Declaration [("a", Type("int", false, false, [Fixed (Int 1)]))])) [("a", ArrayType(IntType))] [];
 
   (* nested declarations should become part of the local context *)
+  print_endline "  nested declarations";
   t (es (Array [int_a])) [("a", IntType)] [];
   t (es (Array [int_a; int_b])) [("a", IntType); ("b", IntType)] [];
+  t (es (ArithNegation int_a)) [("a", IntType)] [];
+  t (es (Negation int_a)) [("a", IntType)] [];
+  t (es (PreInc int_a)) [("a", IntType)] [];
+  t (es (PostInc int_a)) [("a", IntType)] [];
+  t (es (PreDec int_a)) [("a", IntType)] [];
+  t (es (PostDec int_a)) [("a", IntType)] [];
+  t (es (Member(int_a, "b"))) [("a", IntType)] [];
   t (es (Chuck(Int 1, int_a))) [("a", IntType)] [];
   t (es (Chuck(int_a, Int 1))) [("a", IntType)] [];
   t (es (Plus(Int 1, int_a))) [("a", IntType)] [];
@@ -73,15 +83,6 @@ let _ =
   print_endline ("failed " ^ (string_of_int !num_failed) ^ " of " ^ (string_of_int !num_tests))
 
 (*
-  | Array of expr list
-  | ArithNegation of expr
-  | Negation of expr
-  | PreInc of expr
-  | PostInc of expr
-  | PreDec of expr
-  | PostDec of expr
-  | Member of expr * string
-  | FunCall of expr * expr list
   | Subscript of expr * expr
   | Chuck of expr * expr
   | Unchuck of expr * expr

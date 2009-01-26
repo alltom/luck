@@ -89,6 +89,7 @@ let rec extract_expr_cntxt expr =
       (!cntxt, (Ast.Array exps'))
   | Ast.UnaryExpr (op, e1) -> unary_helper e1 (fun e1' -> Ast.UnaryExpr(op, e1'))
   | Ast.BinaryExpr (op, e1, e2) -> binary_helper e1 e2 (fun e1' e2' -> Ast.BinaryExpr(op, e1', e2'))
+  | Ast.Member (e1, m) -> unary_helper e1 (fun e1' -> Ast.Member(e1', m))
   | _ -> (Context.empty, expr)
 
 (* extract declarations from sub-expressions which aren't contained by

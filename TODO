@@ -1,3 +1,2 @@
-Print information on AST (sanity check on parser)
 Check that all class/variable references exist
 Assign type information and check for validity

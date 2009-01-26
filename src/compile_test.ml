@@ -51,7 +51,7 @@ let _ =
   print_endline "  constant expressions";
   t NullStatement [] [];
   t (es (Int 1)) [] [];
-  t (es (Plus(Int 1, Int 2))) [] [];
+  t (es (BinaryExpr(Plus, Int 1, Int 2))) [] [];
   
   (* simple declarations should become part of the local context *)
   print_endline "  simple declarations";
@@ -68,46 +68,8 @@ let _ =
   print_endline "  nested declarations";
   t (es (Array [int_a])) [("a", IntType)] [];
   t (es (Array [int_a; int_b])) [("a", IntType); ("b", IntType)] [];
-  t (es (ArithNegation int_a)) [("a", IntType)] [];
-  t (es (Negation int_a)) [("a", IntType)] [];
-  t (es (PreInc int_a)) [("a", IntType)] [];
-  t (es (PostInc int_a)) [("a", IntType)] [];
-  t (es (PreDec int_a)) [("a", IntType)] [];
-  t (es (PostDec int_a)) [("a", IntType)] [];
+  t (es (UnaryExpr(ArithNegation, int_a))) [("a", IntType)] [];
+  t (es (BinaryExpr(Chuck, Int 1, int_a))) [("a", IntType)] [];
   t (es (Member(int_a, "b"))) [("a", IntType)] [];
-  t (es (Chuck(Int 1, int_a))) [("a", IntType)] [];
-  t (es (Chuck(int_a, Int 1))) [("a", IntType)] [];
-  t (es (Plus(Int 1, int_a))) [("a", IntType)] [];
-  t (es (Plus(int_a, Int 1))) [("a", IntType)] [];
   
   print_endline ("failed " ^ (string_of_int !num_failed) ^ " of " ^ (string_of_int !num_tests))
-
-(*
-  | Subscript of expr * expr
-  | Chuck of expr * expr
-  | Unchuck of expr * expr
-  | Upchuck of expr * expr
-  | Atchuck of expr * expr
-  | Minuschuck of expr * expr
-  | Pluschuck of expr * expr
-  | Cast of expr * typ
-  | Time of expr * expr
-  | Spork of expr
-  | Plus of expr * expr
-  | Minus of expr * expr
-  | Multiply of expr * expr
-  | Divide of expr * expr
-  | Modulo of expr * expr
-  | Exponentiate of expr * expr
-  | LessThan of expr * expr
-  | LessThanOrEqualTo of expr * expr
-  | GreaterThan of expr * expr
-  | GreaterThanOrEqualTo of expr * expr
-  | Equals of expr * expr
-  | NotEquals of expr * expr
-  | BinaryAnd of expr * expr
-  | BinaryOr of expr * expr
-  | Trinary of expr * expr * expr
-  | Declaration of decl
-  | Comma of expr * expr
-*)

@@ -87,15 +87,8 @@ let rec extract_expr_cntxt expr =
         exps
       in
       (!cntxt, (Ast.Array exps'))
-  | Ast.ArithNegation e1 -> unary_helper e1 (fun e1' -> Ast.ArithNegation(e1'))
-  | Ast.Negation e1 -> unary_helper e1 (fun e1' -> Ast.Negation(e1'))
-  | Ast.PreInc e1 -> unary_helper e1 (fun e1' -> Ast.PreInc(e1'))
-  | Ast.PostInc e1 -> unary_helper e1 (fun e1' -> Ast.PostInc(e1'))
-  | Ast.PreDec e1 -> unary_helper e1 (fun e1' -> Ast.PreDec(e1'))
-  | Ast.PostDec e1 -> unary_helper e1 (fun e1' -> Ast.PostDec(e1'))
-  | Ast.Member (e1, m) -> unary_helper e1 (fun e1' -> Ast.Member(e1', m))
-  | Ast.Chuck (e1, e2) -> binary_helper e1 e2 (fun e1' e2' -> Ast.Chuck(e1', e2'))
-  | Ast.Plus (e1, e2) -> binary_helper e1 e2 (fun e1' e2' -> Ast.Plus(e1', e2'))
+  | Ast.UnaryExpr (op, e1) -> unary_helper e1 (fun e1' -> Ast.UnaryExpr(op, e1'))
+  | Ast.BinaryExpr (op, e1, e2) -> binary_helper e1 e2 (fun e1' e2' -> Ast.BinaryExpr(op, e1', e2'))
   | _ -> (Context.empty, expr)
 
 (* extract declarations from sub-expressions which aren't contained by

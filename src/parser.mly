@@ -13,7 +13,7 @@ let parse_error s =
    sub-expressions *)
 let rec commas_to_list e =
   match e with
-    Comma (e1, e2) -> (commas_to_list e1) @ (commas_to_list e2)
+    BinaryExpr(Comma, e1, e2) -> (commas_to_list e1) @ (commas_to_list e2)
   | _ -> [e]
 %}
 
@@ -137,44 +137,44 @@ contained_exp:
 | LPAREN exp RPAREN                 { $2 }
 | LBRACK exp RBRACK                 { Array(commas_to_list $2) }
 | contained_exp PERIOD ID           { Member($1, $3) }
-| MINUS contained_exp %prec NEG     { ArithNegation($2) }
-| BANG contained_exp %prec NEG      { Negation($2) }
-| contained_exp PLUSPLUS            { PostInc($1) }
-| PLUSPLUS contained_exp            { PreInc($2) }
-| contained_exp MINUSMINUS          { PostDec($1) }
-| MINUSMINUS contained_exp          { PreDec($2) }
+| MINUS contained_exp %prec NEG     { UnaryExpr(ArithNegation, $2) }
+| BANG contained_exp %prec NEG      { UnaryExpr(Negation, $2) }
+| contained_exp PLUSPLUS            { UnaryExpr(PostInc, $1) }
+| PLUSPLUS contained_exp            { UnaryExpr(PreInc, $2) }
+| contained_exp MINUSMINUS          { UnaryExpr(PostDec, $1) }
+| MINUSMINUS contained_exp          { UnaryExpr(PreDec, $2) }
 | contained_exp LPAREN exp RPAREN   { FunCall($1, (commas_to_list $3)) }
 | contained_exp LPAREN RPAREN       { FunCall($1, []) }
-| contained_exp LBRACK exp RBRACK   { Subscript($1, $3) }
+| contained_exp LBRACK exp RBRACK   { BinaryExpr(Subscript, $1, $3) }
 ;
 
 uncontained_exp:
-  exp CHUCK exp                  { Chuck($1, $3) }
-| exp UNCHUCK exp                { Unchuck($1, $3) }
-| exp UPCHUCK exp                { Upchuck($1, $3) }
-| exp ATCHUCK exp                { Atchuck($1, $3) }
-| exp MINUSCHUCK exp             { Minuschuck($1, $3) }
-| exp PLUSCHUCK exp              { Pluschuck($1, $3) }
+  exp CHUCK exp                  { BinaryExpr(Chuck, $1, $3) }
+| exp UNCHUCK exp                { BinaryExpr(Unchuck, $1, $3) }
+| exp UPCHUCK exp                { BinaryExpr(Upchuck, $1, $3) }
+| exp ATCHUCK exp                { BinaryExpr(Atchuck, $1, $3) }
+| exp MINUSCHUCK exp             { BinaryExpr(Minuschuck, $1, $3) }
+| exp PLUSCHUCK exp              { BinaryExpr(Pluschuck, $1, $3) }
 | exp DOLLAR typ                 { Cast($1, $3) }
-| exp CCOLON exp                 { Time($1, $3) }
+| exp CCOLON exp                 { BinaryExpr(Time, $1, $3) }
 | SPORK exp                      { Spork($2) }
-| exp PLUS exp                   { Plus($1, $3) }
-| exp MINUS exp                  { Minus($1, $3) }
-| exp MULTIPLY exp               { Multiply($1, $3) }
-| exp DIVIDE exp                 { Divide($1, $3) }
-| exp PERCENT exp                { Modulo($1, $3) }
-| exp CARET exp                  { Exponentiate($1, $3) }
-| exp LT exp                     { LessThan($1, $3) }
-| exp LEQ exp                    { LessThanOrEqualTo($1, $3) }
-| exp GT exp                     { GreaterThan($1, $3) }
-| exp GEQ exp                    { GreaterThanOrEqualTo($1, $3) }
-| exp EQ exp                     { Equals($1, $3) }
-| exp NEQ exp                    { NotEquals($1, $3) }
-| exp AMPAMP exp                 { BinaryAnd($1, $3) }
-| exp PIPEPIPE exp               { BinaryOr($1, $3) }
+| exp PLUS exp                   { BinaryExpr(Plus, $1, $3) }
+| exp MINUS exp                  { BinaryExpr(Minus, $1, $3) }
+| exp MULTIPLY exp               { BinaryExpr(Multiply, $1, $3) }
+| exp DIVIDE exp                 { BinaryExpr(Divide, $1, $3) }
+| exp PERCENT exp                { BinaryExpr(Modulo, $1, $3) }
+| exp CARET exp                  { BinaryExpr(Exponentiate, $1, $3) }
+| exp LT exp                     { BinaryExpr(LessThan, $1, $3) }
+| exp LEQ exp                    { BinaryExpr(LessThanOrEqualTo, $1, $3) }
+| exp GT exp                     { BinaryExpr(GreaterThan, $1, $3) }
+| exp GEQ exp                    { BinaryExpr(GreaterThanOrEqualTo, $1, $3) }
+| exp EQ exp                     { BinaryExpr(Equals, $1, $3) }
+| exp NEQ exp                    { BinaryExpr(NotEquals, $1, $3) }
+| exp AMPAMP exp                 { BinaryExpr(BinaryAnd, $1, $3) }
+| exp PIPEPIPE exp               { BinaryExpr(BinaryOr, $1, $3) }
 | exp QUESTION exp COLON exp     { Trinary($1, $3, $5) }
 | typ declarator_list %prec DECL { match $1 with Type(t, r, s, _) -> Declaration(List.map (fun (n, c) -> (n, Type(t, r, s, c))) $2) }
-| exp COMMA exp                  { Comma($1, $3) }
+| exp COMMA exp                  { BinaryExpr(Comma, $1, $3) }
 ;
 
 /* FUNCTIONS */

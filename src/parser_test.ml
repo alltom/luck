@@ -73,41 +73,41 @@ let _ =
   t "[a, b];" [] [] [es (Array [a; b])];
   t "[a, b, c];" [] [] [es (Array [a; b; c])];
   t "a.b;" [] [] [es (Member(a, "b"))];
-  t "-a;" [] [] [es (ArithNegation a)];
-  t "!a;" [] [] [es (Negation a)];
-  t "a++;" [] [] [es (PostInc a)];
-  t "++a;" [] [] [es (PreInc a)];
-  t "a--;" [] [] [es (PostDec a)];
-  t "--a;" [] [] [es (PreDec a)];
+  t "-a;" [] [] [es (UnaryExpr(ArithNegation, a))];
+  t "!a;" [] [] [es (UnaryExpr(Negation, a))];
+  t "a++;" [] [] [es (UnaryExpr(PostInc, a))];
+  t "++a;" [] [] [es (UnaryExpr(PreInc, a))];
+  t "a--;" [] [] [es (UnaryExpr(PostDec, a))];
+  t "--a;" [] [] [es (UnaryExpr(PreDec, a))];
   t "a();" [] [] [es (FunCall(a, []))];
   t "a(b);" [] [] [es (FunCall(a, [b]))];
   t "a(b, c);" [] [] [es (FunCall(a, [b; c]))];
   t "a(b, c, d);" [] [] [es (FunCall(a, [b; c; d]))];
-  t "a[b];" [] [] [es (Subscript(a, b))];
-  t "a[b][c];" [] [] [es (Subscript(Subscript(a, b), c))];
-  t "a => b;" [] [] [es (Chuck(a, b))];
-  t "a =< b;" [] [] [es (Unchuck(a, b))];
-  t "a =^ b;" [] [] [es (Upchuck(a, b))];
-  t "a @=> b;" [] [] [es (Atchuck(a, b))];
-  t "a -=> b;" [] [] [es (Minuschuck(a, b))];
-  t "a +=> b;" [] [] [es (Pluschuck(a, b))];
+  t "a[b];" [] [] [es (BinaryExpr(Subscript, a, b))];
+  t "a[b][c];" [] [] [es (BinaryExpr(Subscript, BinaryExpr(Subscript, a, b), c))];
+  t "a => b;" [] [] [es (BinaryExpr(Chuck, a, b))];
+  t "a =< b;" [] [] [es (BinaryExpr(Unchuck, a, b))];
+  t "a =^ b;" [] [] [es (BinaryExpr(Upchuck, a, b))];
+  t "a @=> b;" [] [] [es (BinaryExpr(Atchuck, a, b))];
+  t "a -=> b;" [] [] [es (BinaryExpr(Minuschuck, a, b))];
+  t "a +=> b;" [] [] [es (BinaryExpr(Pluschuck, a, b))];
   t "a $ b;" [] [] [es (Cast(a, Type("b", false, false, [])))];
-  t "a :: b;" [] [] [es (Time(a, b))];
+  t "a :: b;" [] [] [es (BinaryExpr(Time, a, b))];
   t "spork ~ a();" [] [] [es (Spork(FunCall(a, [])))];
-  t "a + b;" [] [] [es (Plus(a, b))];
-  t "a - b;" [] [] [es (Minus(a, b))];
-  t "a * b;" [] [] [es (Multiply(a, b))];
-  t "a / b;" [] [] [es (Divide(a, b))];
-  t "a % b;" [] [] [es (Modulo(a, b))];
-  t "a ^ b;" [] [] [es (Exponentiate(a, b))];
-  t "a < b;" [] [] [es (LessThan(a, b))];
-  t "a <= b;" [] [] [es (LessThanOrEqualTo(a, b))];
-  t "a > b;" [] [] [es (GreaterThan(a, b))];
-  t "a >= b;" [] [] [es (GreaterThanOrEqualTo(a, b))];
-  t "a == b;" [] [] [es (Equals(a, b))];
-  t "a != b;" [] [] [es (NotEquals(a, b))];
-  t "a && b;" [] [] [es (BinaryAnd(a, b))];
-  t "a || b;" [] [] [es (BinaryOr(a, b))];
+  t "a + b;" [] [] [es (BinaryExpr(Plus, a, b))];
+  t "a - b;" [] [] [es (BinaryExpr(Minus, a, b))];
+  t "a * b;" [] [] [es (BinaryExpr(Multiply, a, b))];
+  t "a / b;" [] [] [es (BinaryExpr(Divide, a, b))];
+  t "a % b;" [] [] [es (BinaryExpr(Modulo, a, b))];
+  t "a ^ b;" [] [] [es (BinaryExpr(Exponentiate, a, b))];
+  t "a < b;" [] [] [es (BinaryExpr(LessThan, a, b))];
+  t "a <= b;" [] [] [es (BinaryExpr(LessThanOrEqualTo, a, b))];
+  t "a > b;" [] [] [es (BinaryExpr(GreaterThan, a, b))];
+  t "a >= b;" [] [] [es (BinaryExpr(GreaterThanOrEqualTo, a, b))];
+  t "a == b;" [] [] [es (BinaryExpr(Equals, a, b))];
+  t "a != b;" [] [] [es (BinaryExpr(NotEquals, a, b))];
+  t "a && b;" [] [] [es (BinaryExpr(BinaryAnd, a, b))];
+  t "a || b;" [] [] [es (BinaryExpr(BinaryOr, a, b))];
   t "a ? b : c;" [] [] [es (Trinary(a, b, c))];
   t "int a;" [] [] [es (Declaration([("a", Type("int", false, false, []))]))];
   t "int @ a;" [] [] [es (Declaration([("a", Type("int", true, false, []))]))];
@@ -118,8 +118,8 @@ let _ =
   t "int @ a[][];" [] [] [es (Declaration([("a", Type("int", true, false, [Dynamic; Dynamic]))]))];
   t "int @ a[][], b;" [] [] [es (Declaration([("a", Type("int", true, false, [Dynamic; Dynamic])); ("b", Type("int", true, false, []))]))];
   t "int @ a[][], b[][][];" [] [] [es (Declaration([("a", Type("int", true, false, [Dynamic; Dynamic])); ("b", Type("int", true, false, [Dynamic; Dynamic; Dynamic]))]))];
-  t "a, b;" [] [] [es (Comma(a, b))];
-  t "a, b, c;" [] [] [es (Comma(Comma(a, b), c))];
+  t "a, b;" [] [] [es (BinaryExpr(Comma, a, b))];
+  t "a, b, c;" [] [] [es (BinaryExpr(Comma, BinaryExpr(Comma, a, b), c))];
   
   (* fair-weather functions *)
   t "fun a b(){}" [Function(Type("a", false, false, []), "b", [], [])] [] [];
@@ -171,9 +171,9 @@ let _ =
   t "class a { fun b c(){} fun d e(){} }" [] [Class(false, "a", [], [Function(Type("b", false, false, []), "c", [], []); Function(Type("d", false, false, []), "e", [], [])], [])] [];
 
   (* little precedence things *)
-  t "a + b * c;" [] [] [es (Plus(a, Multiply(b, c)))];
-  t "b * c + a;" [] [] [es (Plus(Multiply(b, c), a))];
+  t "a + b * c;" [] [] [es (BinaryExpr(Plus, a, BinaryExpr(Multiply, b, c)))];
+  t "b * c + a;" [] [] [es (BinaryExpr(Plus, BinaryExpr(Multiply, b, c), a))];
   t "a.b();" [] [] [es (FunCall(Member(a, "b"), []))];
-  t "-a();" [] [] [es (ArithNegation(FunCall(a, [])))];
+  t "-a();" [] [] [es (UnaryExpr(ArithNegation, FunCall(a, [])))];
 
   print_endline ("failed " ^ (string_of_int !num_failed) ^ " of " ^ (string_of_int !num_tests))

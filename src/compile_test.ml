@@ -10,13 +10,13 @@ let strings_of_test_cntxt cntxt =
   List.map (f) cntxt
 
 let strings_of_real_cntxt cntxt =
-  Context.fold (fun name t lst -> ((string_of_type t) ^ " " ^ name) :: lst) cntxt []
+  Context.fold (fun name (t, d) lst -> ((string_of_type t) ^ " " ^ name) :: lst) cntxt []
 
 let rec check_vars cntxt arr =
   match arr with
     (name, t) :: rest ->
       (Context.mem name cntxt)
-        && ((Context.find name cntxt) = t)
+        && (let (t', _) = (Context.find name cntxt) in t' = t)
         && (check_vars cntxt rest)
   | [] -> true
 

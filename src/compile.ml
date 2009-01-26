@@ -6,9 +6,17 @@ type typ =
 | RefType of typ
 | IntType | FloatType | StringType
 
+type data =
+  ArrayData of data array ref
+| RefData of data ref
+| IntData of int ref
+| FloatData of float ref
+| StringData of string ref
+
 module Context = Map.Make(String)
 
 exception Type_declaration
+exception Variable_initialization
 
 let rec string_of_type t =
   match t with
@@ -18,19 +26,25 @@ let rec string_of_type t =
   | FloatType -> "float"
   | StringType -> "string"
 
-let rec convert_type asttype =
+(* returns the converted data type, and an initialize data storage location.
+   ALL arrays (even those defined like "int a[10]") have size 0. *)
+let rec instantiate_type asttype =
   match asttype with
-    Ast.Type("int", false, _, []) -> IntType
-  | Ast.Type("float", false, _, []) -> FloatType
-  | Ast.Type("string", false, _, []) -> StringType
-  | Ast.Type(t, true, s, a) -> RefType(convert_type (Ast.Type(t, false, s, a)))
-  | Ast.Type(t, false, s, h::r) -> ArrayType(convert_type (Ast.Type(t, false, s, r)))
+    Ast.Type("int", false, _, []) -> (IntType, IntData(ref 0))
+  | Ast.Type("float", false, _, []) -> (FloatType, FloatData(ref 0.0))
+  | Ast.Type("string", false, _, []) -> (StringType, StringData(ref ""))
+  | Ast.Type(t, true, s, a) ->
+      let (t', d) = instantiate_type (Ast.Type(t, false, s, a)) in
+      (RefType t', RefData(ref d))
+  | Ast.Type(t, false, s, h::r) ->
+      let (t', d) = instantiate_type (Ast.Type(t, false, s, r)) in
+      (ArrayType t', ArrayData (ref (Array.make 0 d)))
   | _ -> raise Type_declaration
 
 let rec build_context cntxt decls =
   match decls with
     (name, t) :: rest ->
-      build_context (Context.add name (convert_type t) cntxt) rest
+      build_context (Context.add name (instantiate_type t) cntxt) rest
     | [] -> cntxt
 
 (* if overwrite is true, variables in c2 overwrite those in c2.

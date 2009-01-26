@@ -72,3 +72,12 @@ type clas =
   Class of bool * string * string list * func list * stmt list
 
 type ast = AST of func list * clas list * stmt list
+
+let string_of_type (Type(name, reference, static, arrdep)) =
+  let rec ncopy n str =
+    if n > 0 then str ^ (ncopy (n-1) str) else ""
+  in
+  (if static then "static " else "")
+    ^ name
+    ^ (if reference then " @ " else "")
+    ^ (ncopy arrdep "[]")

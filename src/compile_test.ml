@@ -50,7 +50,7 @@ let _ =
   t (es (Int 1)) [] [];
   t (es (Plus(Int 1, Int 2))) [] [];
   
-  (* declarations should become part of the local context *)
+  (* simple declarations should become part of the local context *)
   t (es (Declaration [("a", Type("int", false, false, []))])) [("a", IntType)] [];
   t (es (Declaration [("b", Type("int", false, false, [Dynamic]))])) [("b", ArrayType(IntType))] [];
   t (es (Declaration [("b", Type("int", false, false, [Dynamic; Dynamic]))])) [("b", ArrayType(ArrayType(IntType)))] [];
@@ -58,5 +58,9 @@ let _ =
   t (es (Declaration [("a", Type("string", false, false, []))])) [("a", StringType)] [];
   t (es (Declaration [("a", Type("int", true, false, []))])) [("a", RefType(IntType))] [];
   t (es (Declaration [("a", Type("int", true, false, [Dynamic]))])) [("a", RefType(ArrayType(IntType)))] [];
+  t (es (Declaration [("a", Type("int", false, false, [Fixed (Int 1)]))])) [("a", ArrayType(IntType))] [];
+
+  (* nested declarations should become part of the local context *)
+  t (es (Chuck(Int 1, Declaration [("a", Type("int", false, false, []))]))) [("a", IntType)] [];
   
   print_endline ("failed " ^ (string_of_int !num_failed) ^ " of " ^ (string_of_int !num_tests))

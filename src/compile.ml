@@ -23,8 +23,6 @@ module Context = Map.Make(String)
 
 exception Compiler_error of string (* something went wrong internally *)
 exception Not_implemented
-exception Type_declaration
-exception Variable_initialization
 exception Redeclaration
 exception Undeclared_variable of string (* name of undeclared variable *)
 
@@ -52,7 +50,7 @@ let rec instantiate_type asttype =
   | Type(t, false, s, h::r) ->
       let (t', d, s) = instantiate_type (Type(t, false, s, r)) in
       (ArrayType t', ArrayData (ref (Array.make 0 d)), s)
-  | _ -> raise Type_declaration
+  | _ -> raise Not_implemented
 
 (* returns a context, and its initialization code *)
 let rec build_context cntxt decls =

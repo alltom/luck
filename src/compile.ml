@@ -16,32 +16,8 @@ type data =
 | FloatData of float ref
 | StringData of string ref
 
-type binary_op =
-  ChuckOp | UnchuckOp | UpchuckOp | AtchuckOp | MinuschuckOp | PluschuckOp
-| PlusOp | MinusOp | MultiplyOp | DivideOp | ModuloOp | ExponentiateOp
-| LessThanOp | LessThanOrEqualToOp
-| GreaterThanOp | GreaterThanOrEqualToOp
-| EqualsOp | NotEqualsOp
-| BinaryAndOp | BinaryOrOp
-
-let binop_of_astbinop op =
-  match op with
-    Chuck -> ChuckOp | Unchuck -> UnchuckOp
-  | Upchuck -> UpchuckOp | Atchuck -> AtchuckOp
-  | Minuschuck -> MinuschuckOp | Pluschuck -> PluschuckOp
-  | Plus -> PlusOp | Minus -> MinusOp | Multiply -> MultiplyOp | Divide -> DivideOp
-  | Modulo -> ModuloOp | Exponentiate -> ExponentiateOp
-  | LessThan -> LessThanOp | LessThanOrEqualTo -> LessThanOrEqualToOp
-  | GreaterThan -> GreaterThanOp | GreaterThanOrEqualTo -> GreaterThanOrEqualToOp
-  | Equals -> EqualsOp | NotEquals -> NotEqualsOp
-  | BinaryAnd -> BinaryAndOp | BinaryOr -> BinaryOrOp
-
 type instruction =
-  PrintInstr of data list
-| IntBinaryOpInstr of binary_op * int ref * int ref * data ref
-| FloatBinaryOpInstr of binary_op * float ref * float ref * data ref
-| BoolBinaryOpInstr of binary_op * bool ref * bool ref * data ref
-| StringBinaryOpInstr of binary_op * string ref * string ref * data ref
+  Op of (unit -> unit)
 
 module Context = Map.Make(String)
 
@@ -71,30 +47,6 @@ let rec string_of_data d =
   | BoolData b -> "bool " ^ (string_of_bool !b)
   | FloatData f -> "float " ^ (string_of_float !f)
   | StringData s -> "string \"" ^ !s ^ "\""
-
-let string_of_binary_op op =
-  match op with
-    ChuckOp -> "=>"
-  | UnchuckOp -> "=<"
-  | UpchuckOp -> "=^"
-  | AtchuckOp -> "@=>"
-  | MinuschuckOp -> "-=>"
-  | PluschuckOp -> "+=>"
-  | PlusOp -> "+" | MinusOp -> "-" | MultiplyOp -> "*" | DivideOp -> "/"
-  | ModuloOp -> "%"
-  | ExponentiateOp -> "^"
-  | LessThanOp -> "<" | LessThanOrEqualToOp -> "<="
-  | GreaterThanOp -> ">" | GreaterThanOrEqualToOp -> ">="
-  | EqualsOp -> "==" | NotEqualsOp -> "!="
-  | BinaryAndOp -> "&&" | BinaryOrOp -> "||"
-
-let string_of_instr i =
-  match i with
-    PrintInstr datas -> "print(" ^ (String.concat ", " (List.map string_of_data datas)) ^ ")"
-  | IntBinaryOpInstr (op, l, r, o) -> "intop(" ^ (string_of_int !l) ^ " " ^ (string_of_binary_op op) ^ " " ^ (string_of_int !r) ^ ")"
-  | FloatBinaryOpInstr (op, l, r, o) -> "floatop(" ^ (string_of_float !l) ^ " " ^ (string_of_binary_op op) ^ " " ^ (string_of_float !r) ^ ")"
-  | BoolBinaryOpInstr (op, l, r, o) -> "boolop(" ^ (string_of_bool !l) ^ " " ^ (string_of_binary_op op) ^ " " ^ (string_of_bool !r) ^ ")"
-  | StringBinaryOpInstr (op, l, r, o) -> "stringop(\"" ^ !l ^ "\" " ^ (string_of_binary_op op) ^ " \"" ^ !r ^ "\")"
 
 (* returns the converted data type, an initialized data storage location,
    and the instructions to execute to finish initialization (for non-primitives
@@ -218,9 +170,6 @@ let rec promote_type t1 t2 =
   | (StringType, StringType) -> StringType
   | _ -> raise (Type_mismatch ("incompatible types " ^ (string_of_type t1) ^ " and " ^ (string_of_type t2)))
 
-let get_type cntxt e =
-  IntType (* TODO *)
-
 let make_int d =
   match d with
     IntData i -> ([], i)
@@ -251,18 +200,21 @@ let rec compile_expr cntxt expr =
   | Var name ->
       (try let (_, d) = Context.find name cntxt in ([], d)
        with Not_found -> raise (Undeclared_variable name))
-  | Array exprs ->
+  | Array exprs -> raise (Not_implemented "cannot compile array expressions")
+      (*
       let pairs = List.map (fun e -> compile_expr cntxt e) exprs in
       let instrs = List.fold_left (fun i (i', _) -> i @ i') [] pairs in
       let arr = Array.of_list (List.map (fun (_, d) -> d) pairs) in
       (instrs, ArrayData(ref arr))
+      *)
   | Comma exprs ->
       List.fold_left
         (fun (i, d) e -> let (i', d) = compile_expr cntxt e in (i @ i', d))
         ([], IntData(ref 0)) (* the data on the right here is a placeholder, overwritten by fun above *)
         exprs
   | UnaryExpr (op, e1) -> raise (Not_implemented "cannot compile unary expressions")
-  | BinaryExpr (op, e1, e2) ->
+  | BinaryExpr (op, e1, e2) -> raise (Not_implemented "cannot compile binary expressions")
+      (*
       let (i1, d1) = compile_expr cntxt e1 in
       let (i2, d2) = compile_expr cntxt e2 in
       let helper out coercefn instrfn =
@@ -278,6 +230,7 @@ let rec compile_expr cntxt expr =
        | BoolType -> helper (BoolData(ref false)) make_bool (fun op' d1' d2' out -> BoolBinaryOpInstr(op', d1', d2', ref out))
        | StringType -> helper (StringData(ref "")) make_string (fun op' d1' d2' out -> StringBinaryOpInstr(op', d1', d2', ref out))
        )
+       *)
   | Member (e1, mem) -> raise (Not_implemented "cannot compile member expressions")
   | FunCall (e1, args) -> raise (Not_implemented "cannot compile function calls")
   | Cast (e1, t) -> raise (Not_implemented "cannot compile casts")
@@ -290,15 +243,18 @@ let rec compile_expr cntxt expr =
 let compile_stmt parent_cntxt local_cntxt stmt =
   let (subcntxt, stmt', init_instrs) = extract_stmt_cntxt local_cntxt stmt in
   let cntxt = combine_cntxts true parent_cntxt subcntxt in
+  ignore(cntxt);
   let instrs =
     match stmt' with
       NullStatement -> []
-    | Print args ->
+    | Print args -> raise (Not_implemented "cannot compile print statements")
+        (*
         let compiled_exprs = List.map (fun e -> compile_expr cntxt e) args in
         let instrs = List.fold_left (fun i (i', _) -> i @ i') [] compiled_exprs in
         let args' = List.map (fun (_, d) -> d) compiled_exprs in
         instrs @ [PrintInstr args']
-    | _ -> []
+        *)
+    | _ -> raise (Not_implemented "cannot compile this type of statement")
   in
   (subcntxt, init_instrs @ instrs)
 

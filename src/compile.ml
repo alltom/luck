@@ -74,6 +74,22 @@ let combine_cntxts overwrite c1 c2 =
   in
   Context.fold add c2 c1
 
+(* given a list of, say exprs, extracts context from them all using
+   extractf, returning a tuple of the context, the array of extracted
+   expressions, and the initialization instructions *)
+let extract_list_cntxt lst extractf =
+  let cntxt = ref Context.empty in
+  let exprs = ref [] in
+  let instrs = ref [] in
+  List.iter
+    (fun e ->
+       let (c', e', i) = extractf e in
+       cntxt := combine_cntxts false !cntxt c';
+       exprs := !exprs @ [e'];
+       instrs := !instrs @ i)
+    lst;
+  (!cntxt, !exprs, !instrs)
+
 (* extracts declarations from expr, returning a context with the
   declared variables, an expr with declarations replaced by the
   variables themselves, and the code to initialize them.
@@ -95,26 +111,16 @@ let rec extract_expr_cntxt expr =
     let (c3, e3', i3) = extract_expr_cntxt e3 in
     ((combine_cntxts false c1 (combine_cntxts false c2 c3)), f e1' e2' e3', i1 @ i2 @ i3)
   in
-  let list_helper cntxt instrs lst f =
-    let cntxt' = ref cntxt in
-    let lst' = List.map
-      (fun e ->
-         let (c', e', i) = extract_expr_cntxt e in
-         cntxt' := combine_cntxts false !cntxt' c';
-         e')
-      lst
-    in
-    (!cntxt', f lst', instrs @ [])
-  in
   match expr with
-    Array exps -> list_helper Context.empty [] exps (fun exps' -> Array exps')
-  | Comma exps -> list_helper Context.empty [] exps (fun exps' -> Comma exps')
+    Array exps -> let (c, exps', i) = extract_list_cntxt exps extract_expr_cntxt in (c, Array exps', i)
+  | Comma exps -> let (c, exps', i) = extract_list_cntxt exps extract_expr_cntxt in (c, Comma exps', i)
   | UnaryExpr (op, e1) -> unary_helper e1 (fun e1' -> UnaryExpr(op, e1'))
   | BinaryExpr (op, e1, e2) -> binary_helper e1 e2 (fun e1' e2' -> BinaryExpr(op, e1', e2'))
   | Member (e1, m) -> unary_helper e1 (fun e1' -> Member(e1', m))
   | FunCall (e1, args) ->
-      let (c, e1', i) = extract_expr_cntxt e1 in
-      list_helper c i args (fun args' -> FunCall(e1', args'))
+      let (c1, e1', i1) = extract_expr_cntxt e1 in
+      let (c2, args', i2) = extract_list_cntxt args extract_expr_cntxt in
+      (combine_cntxts false c1 c2, FunCall(e1', args'), i1 @ i2)
   | Cast (e1, t) -> unary_helper e1 (fun e1' -> Cast (e1', t))
   | Spork e1 -> unary_helper e1 (fun e1' -> Spork e1')
   | Trinary (e1, e2, e3) -> trinary_helper e1 e2 e3 (fun e1' e2' e3' -> Trinary(e1', e2', e3'))

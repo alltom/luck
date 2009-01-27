@@ -162,7 +162,8 @@ let compile_expr cntxt expr =
   | Declaration of decl
 *)
 
-let compile parent_cntxt stmt =
+(* TODO: take local context (non-overwritable) as well as parent context *)
+let compile_stmt parent_cntxt stmt =
   let (subcntxt, stmt', init_instrs) = extract_stmt_cntxt stmt in
   let cntxt = combine_cntxts true parent_cntxt subcntxt in
   let instrs = match stmt' with
@@ -175,3 +176,12 @@ let compile parent_cntxt stmt =
     | _ -> []
   in
   (subcntxt, init_instrs @ instrs)
+
+let compile (AST(fns, classes, stmts)) =
+  let cntxt = ref Context.empty in (* TODO: should be context containing fns and classes *)
+  let compile_stmt instrs stmt =
+    let (cntxt', instrs') = compile_stmt !cntxt stmt in
+    cntxt := combine_cntxts true !cntxt cntxt';
+    instrs @ instrs'
+  in
+  List.fold_left compile_stmt [] stmts

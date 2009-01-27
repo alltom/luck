@@ -25,10 +25,10 @@ let fail msg =
   prerr_endline ("FAILED: " ^ msg)
 
 (* assertion *)
-let t stmts cntxt code =
+let t stmt cntxt code =
   num_tests := !num_tests + 1;
   try
-    let rescntxt, rescode = compile Context.empty stmts in
+    let rescntxt, rescode = compile_stmt Context.empty stmt in
     if check_vars rescntxt cntxt then
       (if rescode = code then
          print_endline ("passed")

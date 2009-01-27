@@ -8,7 +8,6 @@ let main () =
     try Parser.input Lexer.token (Lexing.from_channel stdin)
     with Parsing.Parse_error -> exit 1
   in
-  ast_summary tree;
   let instrs =
     try compile tree
     with

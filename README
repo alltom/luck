@@ -27,7 +27,6 @@
   DO SOMETHING
     $ ./luck
     reads a LucK script from stdin
-       and prints a summary of its classes & functions
        then tries to execute it
        or yells at you if it's not valid
           of if it didn't know how to compile all of it yet

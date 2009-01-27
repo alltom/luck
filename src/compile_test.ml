@@ -92,7 +92,7 @@ let _ =
   t (Print [Int 1; Bool false]) [] [PrintInstr [IntData (ref 1); BoolData (ref false)]];
   t (Print [int_a]) [] [PrintInstr [IntData (ref 0)]];
   t (Print [Declaration [("a", Type("int", false, false, [])); ("b", Type("int", false, false, []))]]) [("a", IntType); ("b", IntType)] [PrintInstr [ArrayData(ref [| IntData(ref 0); IntData(ref 0) |])]];
-  t (Print [BinaryExpr(Plus, Int 1, Int 2)]) [] [IntBinaryOpInstr(PlusOp, IntData(ref 1), IntData(ref 2), int_out_1); PrintInstr [int_out_1]];
+  t (Print [BinaryExpr(Plus, Int 1, Int 2)]) [] [IntBinaryOpInstr(PlusOp, ref 1, ref 2, ref int_out_1); PrintInstr [int_out_1]];
   
   (* automatic type conversion *)
   

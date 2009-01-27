@@ -24,9 +24,24 @@ type binary_op =
 | EqualsOp | NotEqualsOp
 | BinaryAndOp | BinaryOrOp
 
+let binop_of_astbinop op =
+  match op with
+    Chuck -> ChuckOp | Unchuck -> UnchuckOp
+  | Upchuck -> UpchuckOp | Atchuck -> AtchuckOp
+  | Minuschuck -> MinuschuckOp | Pluschuck -> PluschuckOp
+  | Plus -> PlusOp | Minus -> MinusOp | Multiply -> MultiplyOp | Divide -> DivideOp
+  | Modulo -> ModuloOp | Exponentiate -> ExponentiateOp
+  | LessThan -> LessThanOp | LessThanOrEqualTo -> LessThanOrEqualToOp
+  | GreaterThan -> GreaterThanOp | GreaterThanOrEqualTo -> GreaterThanOrEqualToOp
+  | Equals -> EqualsOp | NotEquals -> NotEqualsOp
+  | BinaryAnd -> BinaryAndOp | BinaryOr -> BinaryOrOp
+
 type instruction =
   PrintInstr of data list
-| IntBinaryOpInstr of binary_op * data * data * data (* op, left, right, out *)
+| IntBinaryOpInstr of binary_op * int ref * int ref * data ref
+| FloatBinaryOpInstr of binary_op * float ref * float ref * data ref
+| BoolBinaryOpInstr of binary_op * bool ref * bool ref * data ref
+| StringBinaryOpInstr of binary_op * string ref * string ref * data ref
 
 module Context = Map.Make(String)
 
@@ -76,7 +91,10 @@ let string_of_binary_op op =
 let string_of_instr i =
   match i with
     PrintInstr datas -> "print(" ^ (String.concat ", " (List.map string_of_data datas)) ^ ")"
-  | IntBinaryOpInstr (op, l, r, o) -> "intop(" ^ (string_of_data l) ^ " " ^ (string_of_binary_op op) ^ " " ^ (string_of_data r) ^ ")"
+  | IntBinaryOpInstr (op, l, r, o) -> "intop(" ^ (string_of_int !l) ^ " " ^ (string_of_binary_op op) ^ " " ^ (string_of_int !r) ^ ")"
+  | FloatBinaryOpInstr (op, l, r, o) -> "floatop(" ^ (string_of_float !l) ^ " " ^ (string_of_binary_op op) ^ " " ^ (string_of_float !r) ^ ")"
+  | BoolBinaryOpInstr (op, l, r, o) -> "boolop(" ^ (string_of_bool !l) ^ " " ^ (string_of_binary_op op) ^ " " ^ (string_of_bool !r) ^ ")"
+  | StringBinaryOpInstr (op, l, r, o) -> "stringop(\"" ^ !l ^ "\" " ^ (string_of_binary_op op) ^ " \"" ^ !r ^ "\")"
 
 (* returns the converted data type, an initialized data storage location,
    and the instructions to execute to finish initialization (for non-primitives
@@ -201,7 +219,27 @@ let rec promote_type t1 t2 =
   | _ -> raise (Type_mismatch ("incompatible types " ^ (string_of_type t1) ^ " and " ^ (string_of_type t2)))
 
 let get_type cntxt e =
-  IntType
+  IntType (* TODO *)
+
+let make_int d =
+  match d with
+    IntData i -> ([], i)
+  | _ -> ([], ref 0) (* TODO *)
+
+let make_float d =
+  match d with
+    FloatData f -> ([], f)
+  | _ -> ([], ref 0.0) (* TODO *)
+
+let make_bool d =
+  match d with
+    BoolData b -> ([], b)
+  | _ -> ([], ref false) (* TODO *)
+
+let make_string d =
+  match d with
+    StringData s -> ([], s)
+  | _ -> ([], ref "") (* TODO *)
 
 let rec compile_expr cntxt expr =
   match expr with
@@ -227,9 +265,19 @@ let rec compile_expr cntxt expr =
   | BinaryExpr (op, e1, e2) ->
       let (i1, d1) = compile_expr cntxt e1 in
       let (i2, d2) = compile_expr cntxt e2 in
+      let helper out coercefn instrfn =
+        let (i1', d1') = coercefn d1 in
+        let (i2', d2') = coercefn d2 in
+        (i1 @ i2 @ i1' @ i2' @ [instrfn (binop_of_astbinop op) d1' d2' out], out)
+      in
       (match promote_type (get_type cntxt e1) (get_type cntxt e2) with
-         IntType -> let out = IntData(ref 0) in (i1 @ i2 @ [IntBinaryOpInstr(PlusOp, d1, d2, out)], out)
-       | _ -> raise (Not_implemented "cannot compile binary expressions"))
+         ArrayType elems -> raise (Not_implemented "cannot compile binary expression with arrays")
+       | RefType d -> raise (Not_implemented "cannot compile binary expression with reference types")
+       | IntType -> helper (IntData(ref 0)) make_int (fun op' d1' d2' out -> IntBinaryOpInstr(op', d1', d2', ref out))
+       | FloatType -> helper (FloatData(ref 0.0)) make_float (fun op' d1' d2' out -> FloatBinaryOpInstr(op', d1', d2', ref out))
+       | BoolType -> helper (BoolData(ref false)) make_bool (fun op' d1' d2' out -> BoolBinaryOpInstr(op', d1', d2', ref out))
+       | StringType -> helper (StringData(ref "")) make_string (fun op' d1' d2' out -> StringBinaryOpInstr(op', d1', d2', ref out))
+       )
   | Member (e1, mem) -> raise (Not_implemented "cannot compile member expressions")
   | FunCall (e1, args) -> raise (Not_implemented "cannot compile function calls")
   | Cast (e1, t) -> raise (Not_implemented "cannot compile casts")

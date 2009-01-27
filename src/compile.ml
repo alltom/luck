@@ -213,22 +213,23 @@ let rec compile_expr cntxt expr =
         ([], IntData(ref 0)) (* the data on the right here is a placeholder, overwritten by fun above *)
         exprs
   | UnaryExpr (op, e1) -> raise (Not_implemented "cannot compile unary expressions")
-  | BinaryExpr (op, e1, e2) -> raise (Not_implemented "cannot compile binary expressions")
-      (*
+  | BinaryExpr (op, e1, e2) ->
       let (i1, d1) = compile_expr cntxt e1 in
       let (i2, d2) = compile_expr cntxt e2 in
+      (*
       let helper out coercefn instrfn =
         let (i1', d1') = coercefn d1 in
         let (i2', d2') = coercefn d2 in
         (i1 @ i2 @ i1' @ i2' @ [instrfn (binop_of_astbinop op) d1' d2' out], out)
       in
+      *)
       (match promote_type (get_type cntxt e1) (get_type cntxt e2) with
          ArrayType elems -> raise (Not_implemented "cannot compile binary expression with arrays")
        | RefType d -> raise (Not_implemented "cannot compile binary expression with reference types")
-       | IntType -> helper (IntData(ref 0)) make_int (fun op' d1' d2' out -> IntBinaryOpInstr(op', d1', d2', ref out))
-       | FloatType -> helper (FloatData(ref 0.0)) make_float (fun op' d1' d2' out -> FloatBinaryOpInstr(op', d1', d2', ref out))
-       | BoolType -> helper (BoolData(ref false)) make_bool (fun op' d1' d2' out -> BoolBinaryOpInstr(op', d1', d2', ref out))
-       | StringType -> helper (StringData(ref "")) make_string (fun op' d1' d2' out -> StringBinaryOpInstr(op', d1', d2', ref out))
+       | IntType -> raise (Not_implemented "cannot compile binary expression with int types")
+       | FloatType -> raise (Not_implemented "cannot compile binary expression with float types")
+       | BoolType -> raise (Not_implemented "cannot compile binary expression with bool types")
+       | StringType -> raise (Not_implemented "cannot compile binary expression with string types")
        )
        *)
   | Member (e1, mem) -> raise (Not_implemented "cannot compile member expressions")

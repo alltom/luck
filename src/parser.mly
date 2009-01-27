@@ -145,7 +145,7 @@ contained_exp:
 | MINUSMINUS contained_exp          { UnaryExpr(PreDec, $2) }
 | contained_exp LPAREN exp RPAREN   { FunCall($1, (commas_to_list $3)) }
 | contained_exp LPAREN RPAREN       { FunCall($1, []) }
-| contained_exp LBRACK exp RBRACK   { BinaryExpr(Subscript, $1, $3) }
+| contained_exp LBRACK exp RBRACK   { Subscript($1, $3) }
 ;
 
 uncontained_exp:
@@ -156,7 +156,7 @@ uncontained_exp:
 | exp MINUSCHUCK exp             { BinaryExpr(Minuschuck, $1, $3) }
 | exp PLUSCHUCK exp              { BinaryExpr(Pluschuck, $1, $3) }
 | exp DOLLAR typ                 { Cast($1, $3) }
-| exp CCOLON exp                 { BinaryExpr(Time, $1, $3) }
+| exp CCOLON exp                 { Time($1, $3) }
 | SPORK exp                      { Spork($2) }
 | exp PLUS exp                   { BinaryExpr(Plus, $1, $3) }
 | exp MINUS exp                  { BinaryExpr(Minus, $1, $3) }

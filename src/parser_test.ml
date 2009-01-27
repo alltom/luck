@@ -84,8 +84,8 @@ let _ =
   t "a(b);" [] [] [es (FunCall(a, [b]))];
   t "a(b, c);" [] [] [es (FunCall(a, [b; c]))];
   t "a(b, c, d);" [] [] [es (FunCall(a, [b; c; d]))];
-  t "a[b];" [] [] [es (BinaryExpr(Subscript, a, b))];
-  t "a[b][c];" [] [] [es (BinaryExpr(Subscript, BinaryExpr(Subscript, a, b), c))];
+  t "a[b];" [] [] [es (Subscript(a, b))];
+  t "a[b][c];" [] [] [es (Subscript(Subscript(a, b), c))];
   t "a => b;" [] [] [es (BinaryExpr(Chuck, a, b))];
   t "a =< b;" [] [] [es (BinaryExpr(Unchuck, a, b))];
   t "a =^ b;" [] [] [es (BinaryExpr(Upchuck, a, b))];
@@ -93,7 +93,7 @@ let _ =
   t "a -=> b;" [] [] [es (BinaryExpr(Minuschuck, a, b))];
   t "a +=> b;" [] [] [es (BinaryExpr(Pluschuck, a, b))];
   t "a $ b;" [] [] [es (Cast(a, Type("b", false, false, [])))];
-  t "a :: b;" [] [] [es (BinaryExpr(Time, a, b))];
+  t "a :: b;" [] [] [es (Time(a, b))];
   t "spork ~ a();" [] [] [es (Spork(FunCall(a, [])))];
   t "a + b;" [] [] [es (BinaryExpr(Plus, a, b))];
   t "a - b;" [] [] [es (BinaryExpr(Minus, a, b))];

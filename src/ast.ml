@@ -19,9 +19,7 @@ type
   and
   
   binary_op =
-  | Subscript
   | Chuck | Unchuck | Upchuck | Atchuck | Minuschuck | Pluschuck
-  | Time
   | Plus | Minus | Multiply | Divide | Modulo | Exponentiate
   | LessThan | LessThanOrEqualTo
   | GreaterThan | GreaterThanOrEqualTo
@@ -45,6 +43,8 @@ type
   | Cast of expr * typ
   | Spork of expr
   | Trinary of expr * expr * expr
+  | Subscript of expr * expr
+  | Time of expr * expr
   | Declaration of decl
   and
 
@@ -91,6 +91,8 @@ let rec string_of_expr expr =
   | Cast (e, t) -> (string_of_expr e) ^ " $ " ^ (string_of_type t)
   | Spork e -> "spork ~ " ^ (string_of_expr e)
   | Trinary (e1, e2, e3) -> (string_of_expr e1) ^ " ? " ^ (string_of_expr e2) ^ " : " ^ (string_of_expr e3)
+  | Subscript (e1, e2) -> (string_of_expr e1) ^ "[" ^ (string_of_expr e2) ^ "]"
+  | Time (e1, e2) -> (string_of_expr e1) ^ " :: " ^ (string_of_expr e2)
   | Declaration decls -> "declaration"
 
 let rec string_of_stmt stmt =

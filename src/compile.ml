@@ -128,6 +128,8 @@ let rec extract_expr_cntxt expr =
   | Cast (e1, t) -> unary_helper e1 (fun e1' -> Cast (e1', t))
   | Spork e1 -> unary_helper e1 (fun e1' -> Spork e1')
   | Trinary (e1, e2, e3) -> trinary_helper e1 e2 e3 (fun e1' e2' e3' -> Trinary(e1', e2', e3'))
+  | Subscript (e1, e2) -> binary_helper e1 e2 (fun e1' e2' -> Subscript(e1', e2'))
+  | Time (e1, e2) -> binary_helper e1 e2 (fun e1' e2' -> Time(e1', e2'))
   | Declaration decls ->
       let (c, i) = build_context decls in
       (match decls with
@@ -191,6 +193,8 @@ let rec compile_expr cntxt expr =
   | Cast (e1, t) -> raise (Not_implemented "cannot compile casts")
   | Spork e1 -> raise (Not_implemented "cannot compile sporks")
   | Trinary (e1, e2, e3) -> raise (Not_implemented "cannot compile trinary conditionals")
+  | Subscript (e1, e2) -> raise (Not_implemented "cannot compile subscription")
+  | Time (e1, e2) -> raise (Not_implemented "cannot compile time expressions")
   | Declaration decls -> raise (Compiler_error "declaration wasn't extracted earlier")
 
 let compile_stmt parent_cntxt local_cntxt stmt =

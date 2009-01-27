@@ -39,8 +39,11 @@ let t stmt cntxt code =
             ^ "expected [" ^ (String.concat ", " (strings_of_test_cntxt cntxt)) ^ "], "
             ^ "got [" ^ (String.concat ", " (strings_of_real_cntxt rescntxt)) ^ "]")
   with
-    Type_declaration -> fail "compiler error: type declaration"
-  | _ -> fail "compiler exception"
+    Compiler_error msg -> fail ("compiler error: " ^ msg)
+  | Not_implemented msg -> fail ("not implemented: " ^ msg)
+  | Redeclaration -> fail "variable redeclared"
+  | Undeclared_variable var -> fail ("use of undeclared variable " ^ var)
+  | _ -> fail "unrecognized compiler exception"
 
 let _ =
   let int_a = Declaration [("a", Type("int", false, false, []))] in

@@ -22,7 +22,7 @@ type instruction =
 module Context = Map.Make(String)
 
 exception Compiler_error of string (* something went wrong internally *)
-exception Not_implemented
+exception Not_implemented of string
 exception Redeclaration
 exception Undeclared_variable of string (* name of undeclared variable *)
 
@@ -50,7 +50,7 @@ let rec instantiate_type asttype =
   | Type(t, false, s, h::r) ->
       let (t', d, s) = instantiate_type (Type(t, false, s, r)) in
       (ArrayType t', ArrayData (ref (Array.make 0 d)), s)
-  | _ -> raise Not_implemented
+  | _ -> raise (Not_implemented "cannot instantiate this type")
 
 (* returns a context, and its initialization code *)
 let rec build_context cntxt decls =
@@ -120,11 +120,14 @@ let rec extract_expr_cntxt expr =
   | Cast (e1, t) -> unary_helper e1 (fun e1' -> Cast (e1', t))
   | Spork e1 -> unary_helper e1 (fun e1' -> Spork e1')
   | Trinary (e1, e2, e3) -> trinary_helper e1 e2 e3 (fun e1' e2' e3' -> Trinary(e1', e2', e3'))
+  | Comma exps -> list_helper Context.empty [] exps (fun exps' -> Comma exps')
   | _ -> (Context.empty, expr, [])
 
 (* extract declarations from sub-expressions which aren't contained by
    the statement itself. for exaxmple, "int a" would be extracted from
-   "<<< 4 => int a >>>" but not from "for(0 => int a;;);" *)
+   "<<< 4 => int a >>>" but not from "for(0 => int a;;);". A copy of the statement
+   with used declarations removed is also returned. For example: "<<< 4 => int a >>>"
+   becomes "<<< 4 => a >>>". *)
 let rec extract_stmt_cntxt local_cntxt stmt =
   match stmt with
     ExprStatement e -> let (c, e', i) = extract_expr_cntxt e in (c, ExprStatement e', i)
@@ -146,12 +149,13 @@ let compile_expr cntxt expr =
   | Var name ->
       (try let (_, d) = Context.find name cntxt in ([], d)
        with Not_found -> raise (Undeclared_variable name))
-  | _ -> raise Not_implemented
+  | _ -> raise (Not_implemented ("cannot compile this expression: " ^ (string_of_expr expr)))
 
 let compile_stmt parent_cntxt local_cntxt stmt =
   let (subcntxt, stmt', init_instrs) = extract_stmt_cntxt local_cntxt stmt in
   let cntxt = combine_cntxts true parent_cntxt subcntxt in
-  let instrs = match stmt' with
+  let instrs =
+    match stmt' with
       NullStatement -> []
     | Print args ->
         let compiled_exprs = List.map (fun e -> compile_expr cntxt e) args in

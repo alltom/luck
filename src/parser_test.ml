@@ -111,6 +111,7 @@ let _ =
   t "a || b;" [] [] [es (BinaryExpr(BinaryOr, a, b))];
   t "a ? b : c;" [] [] [es (Trinary(a, b, c))];
   t "int a;" [] [] [es (Declaration([("a", Type("int", false, false, []))]))];
+  t "int a, b;" [] [] [es (Declaration([("a", Type("int", false, false, [])); ("b", Type("int", false, false, []))]))];
   t "int @ a;" [] [] [es (Declaration([("a", Type("int", true, false, []))]))];
   t "int a[];" [] [] [es (Declaration([("a", Type("int", false, false, [Dynamic]))]))];
   t "int a[b];" [] [] [es (Declaration([("a", Type("int", false, false, [Fixed b]))]))];
@@ -176,5 +177,7 @@ let _ =
   t "b * c + a;" [] [] [es (BinaryExpr(Plus, BinaryExpr(Multiply, b, c), a))];
   t "a.b();" [] [] [es (FunCall(Member(a, "b"), []))];
   t "-a();" [] [] [es (UnaryExpr(ArithNegation, FunCall(a, [])))];
+  t " <<< int a, b >>>;" [] [] [Print [Declaration([("a", Type("int", false, false, [])); ("b", Type("int", false, false, []))])]];
+  t " <<< (int a), b, 3 >>>;" [] [] [Print [Declaration([("a", Type("int", false, false, []))]); Var "b"; Int 3]];
 
   print_endline ("failed " ^ (string_of_int !num_failed) ^ " of " ^ (string_of_int !num_tests))

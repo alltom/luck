@@ -19,7 +19,7 @@ type
   and
   
   binary_op =
-  | Chuck | Unchuck | Upchuck | Atchuck | Minuschuck | Pluschuck
+    Chuck | Unchuck | Upchuck | Atchuck | Minuschuck | Pluschuck
   | Plus | Minus | Multiply | Divide | Modulo | Exponentiate
   | LessThan | LessThanOrEqualTo
   | GreaterThan | GreaterThanOrEqualTo

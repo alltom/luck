@@ -30,7 +30,9 @@ let t stmt cntxt code =
       (if rescode = code then
          print_endline ("passed")
        else
-         fail "code didn't match")
+         fail ("code didn't match:\n"
+               ^ "  expected:\n    " ^ (String.concat "\n    " (List.map string_of_instr code)) ^ "\n"
+               ^ "  got:\n    " ^ (String.concat "\n    " (List.map string_of_instr rescode))))
     else
       fail ("contexts didn't match: "
             ^ "expected [" ^ (String.concat ", " (strings_of_test_cntxt cntxt)) ^ "], "
@@ -46,6 +48,7 @@ let _ =
   let int_a = Declaration [("a", Type("int", false, false, []))] in
   let int_b = Declaration [("b", Type("int", false, false, []))] in
   let int_c = Declaration [("c", Type("int", false, false, []))] in
+  let int_out_1 = IntData(ref 0) in
   let es e = ExprStatement(e) in
   
   (* constant expressions with no side effects *)
@@ -89,7 +92,7 @@ let _ =
   t (Print [Int 1; Bool false]) [] [PrintInstr [IntData (ref 1); BoolData (ref false)]];
   t (Print [int_a]) [] [PrintInstr [IntData (ref 0)]];
   t (Print [Declaration [("a", Type("int", false, false, [])); ("b", Type("int", false, false, []))]]) [("a", IntType); ("b", IntType)] [PrintInstr [ArrayData(ref [| IntData(ref 0); IntData(ref 0) |])]];
-  t (Print [BinaryExpr(Plus, Int 1, Int 2)]) [] [PrintInstr [IntData(ref 0)]];
+  t (Print [BinaryExpr(Plus, Int 1, Int 2)]) [] [IntBinaryOpInstr(PlusOp, IntData(ref 1), IntData(ref 2), int_out_1); PrintInstr [int_out_1]];
   
   (* automatic type conversion *)
   

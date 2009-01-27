@@ -16,8 +16,17 @@ type data =
 | FloatData of float ref
 | StringData of string ref
 
+type binary_op =
+  ChuckOp | UnchuckOp | UpchuckOp | AtchuckOp | MinuschuckOp | PluschuckOp
+| PlusOp | MinusOp | MultiplyOp | DivideOp | ModuloOp | ExponentiateOp
+| LessThanOp | LessThanOrEqualToOp
+| GreaterThanOp | GreaterThanOrEqualToOp
+| EqualsOp | NotEqualsOp
+| BinaryAndOp | BinaryOrOp
+
 type instruction =
   PrintInstr of data list
+| IntBinaryOpInstr of binary_op * data * data * data (* op, left, right, out *)
 
 module Context = Map.Make(String)
 
@@ -38,6 +47,36 @@ let rec string_of_type t =
 
 let strings_of_cntxt cntxt =
   Context.fold (fun name (t, d) lst -> ((string_of_type t) ^ " " ^ name) :: lst) cntxt []
+
+let rec string_of_data d =
+  match d with
+    ArrayData elems -> "array"
+  | RefData d' -> "ref " ^ (string_of_data !d')
+  | IntData i -> "int " ^ (string_of_int !i)
+  | BoolData b -> "bool " ^ (string_of_bool !b)
+  | FloatData f -> "float " ^ (string_of_float !f)
+  | StringData s -> "string \"" ^ !s ^ "\""
+
+let string_of_binary_op op =
+  match op with
+    ChuckOp -> "=>"
+  | UnchuckOp -> "=<"
+  | UpchuckOp -> "=^"
+  | AtchuckOp -> "@=>"
+  | MinuschuckOp -> "-=>"
+  | PluschuckOp -> "+=>"
+  | PlusOp -> "+" | MinusOp -> "-" | MultiplyOp -> "*" | DivideOp -> "/"
+  | ModuloOp -> "%"
+  | ExponentiateOp -> "^"
+  | LessThanOp -> "<" | LessThanOrEqualToOp -> "<="
+  | GreaterThanOp -> ">" | GreaterThanOrEqualToOp -> ">="
+  | EqualsOp -> "==" | NotEqualsOp -> "!="
+  | BinaryAndOp -> "&&" | BinaryOrOp -> "||"
+
+let string_of_instr i =
+  match i with
+    PrintInstr datas -> "print(" ^ (String.concat ", " (List.map string_of_data datas)) ^ ")"
+  | IntBinaryOpInstr (op, l, r, o) -> "intop(" ^ (string_of_data l) ^ " " ^ (string_of_binary_op op) ^ " " ^ (string_of_data r) ^ ")"
 
 (* returns the converted data type, an initialized data storage location,
    and the instructions to execute to finish initialization (for non-primitives
@@ -186,8 +225,11 @@ let rec compile_expr cntxt expr =
         exprs
   | UnaryExpr (op, e1) -> raise (Not_implemented "cannot compile unary expressions")
   | BinaryExpr (op, e1, e2) ->
+      let (i1, d1) = compile_expr cntxt e1 in
+      let (i2, d2) = compile_expr cntxt e2 in
       (match promote_type (get_type cntxt e1) (get_type cntxt e2) with
-         _ -> raise (Not_implemented "cannot compile binary expressions"))
+         IntType -> let out = IntData(ref 0) in (i1 @ i2 @ [IntBinaryOpInstr(PlusOp, d1, d2, out)], out)
+       | _ -> raise (Not_implemented "cannot compile binary expressions"))
   | Member (e1, mem) -> raise (Not_implemented "cannot compile member expressions")
   | FunCall (e1, args) -> raise (Not_implemented "cannot compile function calls")
   | Cast (e1, t) -> raise (Not_implemented "cannot compile casts")

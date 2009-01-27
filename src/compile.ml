@@ -35,6 +35,9 @@ let rec string_of_type t =
   | FloatType -> "float"
   | StringType -> "string"
 
+let strings_of_cntxt cntxt =
+  Context.fold (fun name (t, d) lst -> ((string_of_type t) ^ " " ^ name) :: lst) cntxt []
+
 (* returns the converted data type, an initialized data storage location,
    and the instructions to execute to finish initialization (for non-primitives
    and arrays). ALL arrays (even those defined like "int a[10]") have size 0.
@@ -49,7 +52,7 @@ let rec instantiate_type asttype =
       (RefType t', RefData(ref d), s)
   | Type(t, false, s, h::r) ->
       let (t', d, s) = instantiate_type (Type(t, false, s, r)) in
-      (ArrayType t', ArrayData (ref (Array.make 0 d)), s)
+      (ArrayType t', ArrayData (ref (Array.make 0 d)), s) (* TODO: instructions for intitializing properly *)
   | _ -> raise (Not_implemented "cannot instantiate this type")
 
 (* returns a context, and its initialization code *)
@@ -138,10 +141,8 @@ let rec extract_stmt_cntxt local_cntxt stmt =
   match stmt with
     ExprStatement e -> let (c, e', i) = extract_expr_cntxt e in (c, ExprStatement e', i)
   | Print args ->
-      let (c, e, i) = extract_expr_cntxt (Comma args) in
-      (match e with
-         Comma args' -> (c, Print args', i)
-       | _ -> raise (Compiler_error "extract_expr_cntxt returned wrong expr"))
+      let (c, args', i) = extract_list_cntxt args extract_expr_cntxt in
+      (c, Print args', i)
   | _ -> (Context.empty, stmt, [])
 
 let rec compile_expr cntxt expr =

@@ -9,9 +9,6 @@ let strings_of_test_cntxt cntxt =
   let f (name, t) = (string_of_type t) ^ " " ^ name in
   List.map (f) cntxt
 
-let strings_of_real_cntxt cntxt =
-  Context.fold (fun name (t, d) lst -> ((string_of_type t) ^ " " ^ name) :: lst) cntxt []
-
 let rec check_vars cntxt arr =
   match arr with
     (name, t) :: rest ->
@@ -37,7 +34,7 @@ let t stmt cntxt code =
     else
       fail ("contexts didn't match: "
             ^ "expected [" ^ (String.concat ", " (strings_of_test_cntxt cntxt)) ^ "], "
-            ^ "got [" ^ (String.concat ", " (strings_of_real_cntxt rescntxt)) ^ "]")
+            ^ "got [" ^ (String.concat ", " (strings_of_cntxt rescntxt)) ^ "]")
   with
     Compiler_error msg -> fail ("compiler error: " ^ msg)
   | Not_implemented msg -> fail ("not implemented: " ^ msg)

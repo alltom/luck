@@ -83,4 +83,9 @@ let _ =
   t (es (Trinary(Int 1, Int 2, int_a))) [("a", IntType)] [];
   t (es (Trinary(int_a, int_b, int_c))) [("a", IntType); ("b", IntType); ("c", IntType)] [];
   
+  (* simple commands *)
+  print_endline "  simple commands";
+  t (Print [Int 1]) [] [PrintInstr [IntData (ref 1)]];
+  t (Print [Int 1; Bool false]) [] [PrintInstr [IntData (ref 1); BoolData (ref false)]];
+  
   print_endline ("failed " ^ (string_of_int !num_failed) ^ " of " ^ (string_of_int !num_tests))

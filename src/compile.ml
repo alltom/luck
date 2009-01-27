@@ -1,21 +1,28 @@
 
+open Ast
+
 exception Compile_error
 
 type typ =
   ArrayType of typ
 | RefType of typ
-| IntType | FloatType | StringType
+| IntType | FloatType | BoolType | StringType
 
 type data =
   ArrayData of data array ref
 | RefData of data ref
 | IntData of int ref
+| BoolData of bool ref
 | FloatData of float ref
 | StringData of string ref
+
+type instruction =
+  PrintInstr of data list
 
 module Context = Map.Make(String)
 
 exception Compiler_error (* something went wrong internally *)
+exception Not_implemented
 exception Type_declaration
 exception Variable_initialization
 exception Redeclaration
@@ -25,6 +32,7 @@ let rec string_of_type t =
     ArrayType t' -> (string_of_type t') ^ "[]"
   | RefType t' -> (string_of_type t') ^ "@"
   | IntType -> "int"
+  | BoolType -> "bool"
   | FloatType -> "float"
   | StringType -> "string"
 
@@ -34,14 +42,14 @@ let rec string_of_type t =
    before the initialization statements are executed. *)
 let rec instantiate_type asttype =
   match asttype with
-    Ast.Type("int", false, _, []) -> (IntType, IntData(ref 0), [])
-  | Ast.Type("float", false, _, []) -> (FloatType, FloatData(ref 0.0), [])
-  | Ast.Type("string", false, _, []) -> (StringType, StringData(ref ""), [])
-  | Ast.Type(t, true, s, a) ->
-      let (t', d, s) = instantiate_type (Ast.Type(t, false, s, a)) in
+    Type("int", false, _, []) -> (IntType, IntData(ref 0), [])
+  | Type("float", false, _, []) -> (FloatType, FloatData(ref 0.0), [])
+  | Type("string", false, _, []) -> (StringType, StringData(ref ""), [])
+  | Type(t, true, s, a) ->
+      let (t', d, s) = instantiate_type (Type(t, false, s, a)) in
       (RefType t', RefData(ref d), s)
-  | Ast.Type(t, false, s, h::r) ->
-      let (t', d, s) = instantiate_type (Ast.Type(t, false, s, r)) in
+  | Type(t, false, s, h::r) ->
+      let (t', d, s) = instantiate_type (Type(t, false, s, r)) in
       (ArrayType t', ArrayData (ref (Array.make 0 d)), s)
   | _ -> raise Type_declaration
 
@@ -55,7 +63,7 @@ let rec build_context cntxt decls =
     | [] -> (cntxt, instrs)
   in loop cntxt [] decls
 
-(* if overwrite is true, variables in c2 overwrite those in c2.
+(* if overwrite is true, variables in c2 overwrite those in c1.
    otherwise, an exception is thrown if the same variable is
    defined in both contexts *)
 let combine_cntxts overwrite c1 c2 =
@@ -65,7 +73,7 @@ let combine_cntxts overwrite c1 c2 =
     else
       Context.add name entry c'
   in
-  Context.fold add c1 c2
+  Context.fold add c2 c1
 
 (* extracts declarations from expr, returning a context with the
   declared variables, an expr with declarations replaced by the
@@ -100,19 +108,19 @@ let rec extract_expr_cntxt expr =
     (!cntxt', f lst', instrs @ [])
   in
   match expr with
-    Ast.Declaration decls ->
+    Declaration decls ->
       let (c, i) = build_context Context.empty decls in
-      (c, Ast.Comma(List.map (fun (name, _) -> Ast.Var name) decls), i)
-  | Ast.Array exps -> list_helper Context.empty [] exps (fun exps' -> Ast.Array exps')
-  | Ast.UnaryExpr (op, e1) -> unary_helper e1 (fun e1' -> Ast.UnaryExpr(op, e1'))
-  | Ast.BinaryExpr (op, e1, e2) -> binary_helper e1 e2 (fun e1' e2' -> Ast.BinaryExpr(op, e1', e2'))
-  | Ast.Member (e1, m) -> unary_helper e1 (fun e1' -> Ast.Member(e1', m))
-  | Ast.FunCall (e1, args) ->
+      (c, Comma(List.map (fun (name, _) -> Var name) decls), i)
+  | Array exps -> list_helper Context.empty [] exps (fun exps' -> Array exps')
+  | UnaryExpr (op, e1) -> unary_helper e1 (fun e1' -> UnaryExpr(op, e1'))
+  | BinaryExpr (op, e1, e2) -> binary_helper e1 e2 (fun e1' e2' -> BinaryExpr(op, e1', e2'))
+  | Member (e1, m) -> unary_helper e1 (fun e1' -> Member(e1', m))
+  | FunCall (e1, args) ->
       let (c, e1', i) = extract_expr_cntxt e1 in
-      list_helper c i args (fun args' -> Ast.FunCall(e1', args'))
-  | Ast.Cast (e1, t) -> unary_helper e1 (fun e1' -> Ast.Cast (e1', t))
-  | Ast.Spork e1 -> unary_helper e1 (fun e1' -> Ast.Spork e1')
-  | Ast.Trinary (e1, e2, e3) -> trinary_helper e1 e2 e3 (fun e1' e2' e3' -> Ast.Trinary(e1', e2', e3'))
+      list_helper c i args (fun args' -> FunCall(e1', args'))
+  | Cast (e1, t) -> unary_helper e1 (fun e1' -> Cast (e1', t))
+  | Spork e1 -> unary_helper e1 (fun e1' -> Spork e1')
+  | Trinary (e1, e2, e3) -> trinary_helper e1 e2 e3 (fun e1' e2' e3' -> Trinary(e1', e2', e3'))
   | _ -> (Context.empty, expr, [])
 
 (* extract declarations from sub-expressions which aren't contained by
@@ -120,19 +128,50 @@ let rec extract_expr_cntxt expr =
    "<<< 4 => int a >>>" but not from "for(0 => int a;;);" *)
 let rec extract_stmt_cntxt stmt =
   match stmt with
-    Ast.ExprStatement e -> let (c, e', i) = extract_expr_cntxt e in (c, Ast.ExprStatement e', i)
-  | Ast.Print args ->
-      let (c, e, i) = extract_expr_cntxt (Ast.Comma args) in
+    ExprStatement e -> let (c, e', i) = extract_expr_cntxt e in (c, ExprStatement e', i)
+  | Print args ->
+      let (c, e, i) = extract_expr_cntxt (Comma args) in
       (match e with
-         Ast.Comma args' -> (c, Ast.Print args', i)
+         Comma args' -> (c, Print args', i)
        | _ -> raise Compiler_error)
   | _ -> (Context.empty, stmt, [])
 
-(* rough outline:
-   - extract variable declarations relevant to outer context
-   - replace those declarations with the variables themselves
-   - ...
+let compile_expr cntxt expr =
+  match expr with
+    Declaration decls -> raise Compiler_error (* should have been removed when context was extracted *)
+  | NullExpression -> ([], BoolData(ref true)) (* used only in for() w/blank exprs *)
+  | Int i -> ([], IntData(ref i))
+  | Float f -> ([], FloatData(ref f))
+  | Bool b -> ([], BoolData(ref b))
+  | String s -> ([], StringData(ref s))
+  | Var name ->
+      (try let (_, d) = Context.find name cntxt in ([], d)
+       with Not_found -> raise Compiler_error)
+  | _ -> raise Not_implemented
+
+(*
+  | Array of expr list
+  | Comma of expr list
+  | UnaryExpr of unary_op * expr
+  | BinaryExpr of binary_op * expr * expr
+  | Member of expr * string
+  | FunCall of expr * expr list
+  | Cast of expr * typ
+  | Spork of expr
+  | Trinary of expr * expr * expr
+  | Declaration of decl
 *)
-let compile cntxt stmt =
-  let (subcntxt, stmt', instrs) = extract_stmt_cntxt stmt in
-  (subcntxt, instrs)
+
+let compile parent_cntxt stmt =
+  let (subcntxt, stmt', init_instrs) = extract_stmt_cntxt stmt in
+  let cntxt = combine_cntxts true parent_cntxt subcntxt in
+  let instrs = match stmt' with
+      NullStatement -> []
+    | Print args ->
+        let compiled_exprs = List.map (fun e -> compile_expr cntxt e) args in
+        let instrs = List.fold_left (fun i (i', _) -> i @ i') [] compiled_exprs in
+        let args' = List.map (fun (_, d) -> d) compiled_exprs in
+        instrs @ [PrintInstr args']
+    | _ -> []
+  in
+  (subcntxt, init_instrs @ instrs)

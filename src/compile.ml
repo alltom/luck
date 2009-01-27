@@ -107,10 +107,8 @@ let rec extract_expr_cntxt expr =
     (!cntxt', f lst', instrs @ [])
   in
   match expr with
-    Declaration decls ->
-      let (c, i) = build_context Context.empty decls in
-      (c, Comma(List.map (fun (name, _) -> Var name) decls), i)
-  | Array exps -> list_helper Context.empty [] exps (fun exps' -> Array exps')
+    Array exps -> list_helper Context.empty [] exps (fun exps' -> Array exps')
+  | Comma exps -> list_helper Context.empty [] exps (fun exps' -> Comma exps')
   | UnaryExpr (op, e1) -> unary_helper e1 (fun e1' -> UnaryExpr(op, e1'))
   | BinaryExpr (op, e1, e2) -> binary_helper e1 e2 (fun e1' e2' -> BinaryExpr(op, e1', e2'))
   | Member (e1, m) -> unary_helper e1 (fun e1' -> Member(e1', m))
@@ -120,8 +118,10 @@ let rec extract_expr_cntxt expr =
   | Cast (e1, t) -> unary_helper e1 (fun e1' -> Cast (e1', t))
   | Spork e1 -> unary_helper e1 (fun e1' -> Spork e1')
   | Trinary (e1, e2, e3) -> trinary_helper e1 e2 e3 (fun e1' e2' e3' -> Trinary(e1', e2', e3'))
-  | Comma exps -> list_helper Context.empty [] exps (fun exps' -> Comma exps')
-  | _ -> (Context.empty, expr, [])
+  | Declaration decls ->
+      let (c, i) = build_context Context.empty decls in
+      (c, Comma(List.map (fun (name, _) -> Var name) decls), i)
+  | NullExpression | Int _ | Float _ | Bool _ | String _ | Var _ -> (Context.empty, expr, [])
 
 (* extract declarations from sub-expressions which aren't contained by
    the statement itself. for exaxmple, "int a" would be extracted from
@@ -138,7 +138,7 @@ let rec extract_stmt_cntxt local_cntxt stmt =
        | _ -> raise (Compiler_error "extract_expr_cntxt returned wrong expr"))
   | _ -> (Context.empty, stmt, [])
 
-let compile_expr cntxt expr =
+let rec compile_expr cntxt expr =
   match expr with
     Declaration decls -> raise (Compiler_error "declaration wasn't extracted earlier")
   | NullExpression -> ([], BoolData(ref true)) (* used only in for() w/blank exprs *)
@@ -149,6 +149,11 @@ let compile_expr cntxt expr =
   | Var name ->
       (try let (_, d) = Context.find name cntxt in ([], d)
        with Not_found -> raise (Undeclared_variable name))
+  | Comma exprs ->
+      List.fold_left
+        (fun (i, d) e -> let (i', d) = compile_expr cntxt e in (i @ i', d))
+        ([], IntData(ref 0)) (* the data on the right here is just placeholder, overwritten by fun above *)
+        exprs
   | _ -> raise (Not_implemented ("cannot compile this expression: " ^ (string_of_expr expr)))
 
 let compile_stmt parent_cntxt local_cntxt stmt =

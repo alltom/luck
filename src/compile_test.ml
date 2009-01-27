@@ -90,5 +90,6 @@ let _ =
   print_endline "  simple commands";
   t (Print [Int 1]) [] [PrintInstr [IntData (ref 1)]];
   t (Print [Int 1; Bool false]) [] [PrintInstr [IntData (ref 1); BoolData (ref false)]];
+  t (Print [int_a]) [] [PrintInstr [IntData (ref 0)]];
   
   print_endline ("failed " ^ (string_of_int !num_failed) ^ " of " ^ (string_of_int !num_tests))

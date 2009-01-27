@@ -27,7 +27,6 @@ type
   | GreaterThan | GreaterThanOrEqualTo
   | Equals | NotEquals
   | BinaryAnd | BinaryOr
-  | Comma
   and
 
   expr =
@@ -38,6 +37,7 @@ type
   | String of string
   | Var of string
   | Array of expr list
+  | Comma of expr list
   | UnaryExpr of unary_op * expr
   | BinaryExpr of binary_op * expr * expr
   | Member of expr * string

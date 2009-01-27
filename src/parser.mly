@@ -13,7 +13,7 @@ let parse_error s =
    sub-expressions *)
 let rec commas_to_list e =
   match e with
-    BinaryExpr(Comma, e1, e2) -> (commas_to_list e1) @ (commas_to_list e2)
+    Comma exps -> exps
   | _ -> [e]
 %}
 
@@ -174,7 +174,7 @@ uncontained_exp:
 | exp PIPEPIPE exp               { BinaryExpr(BinaryOr, $1, $3) }
 | exp QUESTION exp COLON exp     { Trinary($1, $3, $5) }
 | typ declarator_list %prec DECL { match $1 with Type(t, r, s, _) -> Declaration(List.map (fun (n, c) -> (n, Type(t, r, s, c))) $2) }
-| exp COMMA exp                  { BinaryExpr(Comma, $1, $3) }
+| exp COMMA exp                  { Comma((commas_to_list $1) @ (commas_to_list $3)) }
 ;
 
 /* FUNCTIONS */

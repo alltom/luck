@@ -118,8 +118,8 @@ let _ =
   t "int @ a[][];" [] [] [es (Declaration([("a", Type("int", true, false, [Dynamic; Dynamic]))]))];
   t "int @ a[][], b;" [] [] [es (Declaration([("a", Type("int", true, false, [Dynamic; Dynamic])); ("b", Type("int", true, false, []))]))];
   t "int @ a[][], b[][][];" [] [] [es (Declaration([("a", Type("int", true, false, [Dynamic; Dynamic])); ("b", Type("int", true, false, [Dynamic; Dynamic; Dynamic]))]))];
-  t "a, b;" [] [] [es (BinaryExpr(Comma, a, b))];
-  t "a, b, c;" [] [] [es (BinaryExpr(Comma, BinaryExpr(Comma, a, b), c))];
+  t "a, b;" [] [] [es (Comma [a; b])];
+  t "a, b, c;" [] [] [es (Comma [a; b; c])];
   
   (* fair-weather functions *)
   t "fun a b(){}" [Function(Type("a", false, false, []), "b", [], [])] [] [];

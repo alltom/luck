@@ -56,14 +56,14 @@ let rec instantiate_type asttype =
   | _ -> raise (Not_implemented "cannot instantiate this type")
 
 (* returns a context, and its initialization code *)
-let rec build_context cntxt decls =
+let rec build_context decls =
   let rec loop cntxt instrs decls =
     match decls with
       (name, t) :: rest ->
         let (t', d, i) = instantiate_type t in
         loop (Context.add name (t', d) cntxt) i rest
     | [] -> (cntxt, instrs)
-  in loop cntxt [] decls
+  in loop Context.empty [] decls
 
 (* if overwrite is true, variables in c2 overwrite those in c1.
    otherwise, an exception is thrown if the same variable is
@@ -128,8 +128,10 @@ let rec extract_expr_cntxt expr =
   | Spork e1 -> unary_helper e1 (fun e1' -> Spork e1')
   | Trinary (e1, e2, e3) -> trinary_helper e1 e2 e3 (fun e1' e2' e3' -> Trinary(e1', e2', e3'))
   | Declaration decls ->
-      let (c, i) = build_context Context.empty decls in
-      (c, Comma(List.map (fun (name, _) -> Var name) decls), i)
+      let (c, i) = build_context decls in
+      (match decls with
+         (name, _) :: [] -> (c, Var name, i)
+       | _ -> (c, Array(List.map (fun (name, _) -> Var name) decls), i))
   | NullExpression | Int _ | Float _ | Bool _ | String _ | Var _ -> (Context.empty, expr, [])
 
 (* extract declarations from sub-expressions which aren't contained by
@@ -147,8 +149,7 @@ let rec extract_stmt_cntxt local_cntxt stmt =
 
 let rec compile_expr cntxt expr =
   match expr with
-    Declaration decls -> raise (Compiler_error "declaration wasn't extracted earlier")
-  | NullExpression -> ([], BoolData(ref true)) (* used only in for() w/blank exprs *)
+    NullExpression -> ([], BoolData(ref true)) (* used only in for() w/blank exprs *)
   | Int i -> ([], IntData(ref i))
   | Float f -> ([], FloatData(ref f))
   | Bool b -> ([], BoolData(ref b))
@@ -156,12 +157,24 @@ let rec compile_expr cntxt expr =
   | Var name ->
       (try let (_, d) = Context.find name cntxt in ([], d)
        with Not_found -> raise (Undeclared_variable name))
+  | Array exprs ->
+      let pairs = List.map (fun e -> compile_expr cntxt e) exprs in
+      let instrs = List.fold_left (fun i (i', _) -> i @ i') [] pairs in
+      let arr = Array.of_list (List.map (fun (_, d) -> d) pairs) in
+      (instrs, ArrayData(ref arr))
   | Comma exprs ->
       List.fold_left
         (fun (i, d) e -> let (i', d) = compile_expr cntxt e in (i @ i', d))
-        ([], IntData(ref 0)) (* the data on the right here is just placeholder, overwritten by fun above *)
+        ([], IntData(ref 0)) (* the data on the right here is a placeholder, overwritten by fun above *)
         exprs
-  | _ -> raise (Not_implemented ("cannot compile this expression: " ^ (string_of_expr expr)))
+  | UnaryExpr (op, e1) -> raise (Not_implemented "cannot compile unary expressions")
+  | BinaryExpr (op, e1, e2) -> raise (Not_implemented "cannot compile binary expressions")
+  | Member (e1, mem) -> raise (Not_implemented "cannot compile member expressions")
+  | FunCall (e1, args) -> raise (Not_implemented "cannot compile function calls")
+  | Cast (e1, t) -> raise (Not_implemented "cannot compile casts")
+  | Spork e1 -> raise (Not_implemented "cannot compile sporks")
+  | Trinary (e1, e2, e3) -> raise (Not_implemented "cannot compile trinary conditionals")
+  | Declaration decls -> raise (Compiler_error "declaration wasn't extracted earlier")
 
 let compile_stmt parent_cntxt local_cntxt stmt =
   let (subcntxt, stmt', init_instrs) = extract_stmt_cntxt local_cntxt stmt in

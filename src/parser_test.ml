@@ -33,8 +33,8 @@ let _ =
   t "a;" [] [] [es a];
   t "return;" [] [] [Return];
   t "return a;" [] [] [ValuedReturn(a)];
-  t "<<< a >>>;" [] [] [Print([a])];
-  t "<<< a, b >>>;" [] [] [Print([a; b])];
+  t "<<< a >>>;" [] [] [Print [a]];
+  t "<<< a, b >>>;" [] [] [Print [a; b]];
   t "while(a) b;" [] [] [While(a, [es b])];
   t "while(a){b;}" [] [] [While(a, [es b])];
   t "while(a){b;c;}" [] [] [While(a, [es b; es c])];

@@ -252,8 +252,8 @@ let rec compile_expr cntxt expr =
   | BinaryExpr (op, e1, e2) ->
       let (i1, d1) = compile_expr cntxt e1 in
       let (i2, d2) = compile_expr cntxt e2 in
-      let compile_binop (i1', l) (i2', r) out plusf dataf =
-        (i1 @ i2 @ i1' @ i2' @ [Op(fun () -> out := plusf !l !r)], dataf out)
+      let compile_binop (i1', l) (i2', r) out f dataf =
+        (i1 @ i2 @ i1' @ i2' @ [Op(fun () -> out := f !l !r)], dataf out)
       in
       (match op with
          Plus ->

@@ -25,6 +25,7 @@ exception Compiler_error of string (* something went wrong internally *)
 exception Not_implemented of string
 exception Redeclaration
 exception Undeclared_variable of string (* name of undeclared variable *)
+exception Type_mismatch of string
 
 let rec string_of_type t =
   match t with
@@ -147,6 +148,20 @@ let rec extract_stmt_cntxt local_cntxt stmt =
       (c, Print args', i)
   | _ -> (Context.empty, stmt, [])
 
+(* returns the type which best covers t1 and t2 *)
+let rec promote_type t1 t2 =
+  match (t1, t2) with
+    (ArrayType t1', ArrayType t2') -> promote_type t1' t2'
+  | (RefType t1', RefType t2') -> promote_type t1' t2'
+  | (IntType, IntType) -> IntType
+  | (FloatType, FloatType) -> FloatType
+  | (BoolType, BoolType) -> BoolType
+  | (StringType, StringType) -> StringType
+  | _ -> raise (Type_mismatch ("incompatible types " ^ (string_of_type t1) ^ " and " ^ (string_of_type t2)))
+
+let get_type cntxt e =
+  IntType
+
 let rec compile_expr cntxt expr =
   match expr with
     NullExpression -> ([], BoolData(ref true)) (* used only in for() w/blank exprs *)
@@ -168,7 +183,9 @@ let rec compile_expr cntxt expr =
         ([], IntData(ref 0)) (* the data on the right here is a placeholder, overwritten by fun above *)
         exprs
   | UnaryExpr (op, e1) -> raise (Not_implemented "cannot compile unary expressions")
-  | BinaryExpr (op, e1, e2) -> raise (Not_implemented "cannot compile binary expressions")
+  | BinaryExpr (op, e1, e2) ->
+      (match promote_type (get_type cntxt e1) (get_type cntxt e2) with
+         _ -> raise (Not_implemented "cannot compile binary expressions"))
   | Member (e1, mem) -> raise (Not_implemented "cannot compile member expressions")
   | FunCall (e1, args) -> raise (Not_implemented "cannot compile function calls")
   | Cast (e1, t) -> raise (Not_implemented "cannot compile casts")

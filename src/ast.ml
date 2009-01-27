@@ -74,6 +74,38 @@ let string_of_type (Type(name, reference, static, arrdep)) =
     ^ (if reference then " @ " else "")
     ^ (String.concat "" (List.map (function Dynamic -> "[]" | Fixed n -> "[x]") arrdep))
 
+let rec string_of_expr expr =
+  match expr with
+    NullExpression -> "nullexpr"
+  | Int i -> "int " ^ (string_of_int i)
+  | Float f -> "float " ^ (string_of_float f)
+  | Bool b -> "bool " ^ (string_of_bool b)
+  | String s -> "string \"" ^ s ^ "\""
+  | Var v -> "var " ^ v
+  | Array exprs -> "array"
+  | Comma exprs -> "(" ^ (String.concat ", " (List.map string_of_expr exprs)) ^ ")"
+  | UnaryExpr (op, e1) -> "unary expr"
+  | BinaryExpr (op, e1, e2) -> "binary expr"
+  | Member (e, m) -> "(" ^ (string_of_expr e) ^ ")." ^ m
+  | FunCall (e, args) -> "(" ^ (string_of_expr e) ^ ")(args)"
+  | Cast (e, t) -> (string_of_expr e) ^ " $ " ^ (string_of_type t)
+  | Spork e -> "spork ~ " ^ (string_of_expr e)
+  | Trinary (e1, e2, e3) -> (string_of_expr e1) ^ " ? " ^ (string_of_expr e2) ^ " : " ^ (string_of_expr e3)
+  | Declaration decls -> "declaration"
+
+let rec string_of_stmt stmt =
+  match stmt with
+    NullStatement -> " ;"
+  | ExprStatement e -> (string_of_expr e) ^ ";"
+  | ValuedReturn e -> "return " ^ (string_of_expr e) ^ ";"
+  | Return -> "return;"
+  | Print args -> "<<< " ^ (String.concat ", " (List.map string_of_expr args)) ^ " >>>;"
+  | While (e, stmts) -> "while(.){.}"
+  | Do (stmts, e) -> "do{.}while(.);"
+  | Until (e, stmts) -> "until(.){.};"
+  | If (e, then_stmts, else_stmts) -> "if(.){.}else{.}"
+  | For (e1, e2, e3, stmts) -> "for(.;.;.){.}"
+
 let ast_summary (AST(fns, classes, stmts)) =
   let ip pref str = print_endline (pref ^ str) in
   let function_summary pref (Function(typ, name, decl, stmts)) =

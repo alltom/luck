@@ -264,6 +264,7 @@ let rec compile_expr cntxt expr =
            (match t with
               IntType -> compile_plus make_int (ref 0) (+) (fun o -> IntData o)
             | FloatType -> compile_plus make_float (ref 0.0) (+.) (fun o -> FloatData o)
+            | StringType -> compile_plus make_string (ref "") (^) (fun o -> StringData o)
             | _ -> raise (Not_implemented "cannot compile + with these types"))
        | _ -> raise (Not_implemented "cannot compile this type of binary expression"))
   | Member (e1, mem) -> raise (Not_implemented "cannot compile member expressions")

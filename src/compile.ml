@@ -161,14 +161,21 @@ let rec extract_stmt_cntxt local_cntxt stmt =
 
 (* returns the type which best covers t1 and t2 *)
 let rec promote_type t1 t2 =
+  let fail () =
+    raise (Type_mismatch ("incompatible types " ^ (string_of_type t1) ^ " and " ^ (string_of_type t2)))
+  in
   match (t1, t2) with
     (ArrayType t1', ArrayType t2') -> ArrayType(promote_type t1' t2')
+  | (ArrayType _, _) | (_, ArrayType _) -> fail ()
   | (RefType t1', RefType t2') -> RefType(promote_type t1' t2')
+  | (RefType _, _) | (_, RefType _) -> fail ()
   | (IntType, IntType) -> IntType
   | (FloatType, FloatType) -> FloatType
   | (BoolType, BoolType) -> BoolType
   | (StringType, StringType) -> StringType
-  | _ -> raise (Type_mismatch ("incompatible types " ^ (string_of_type t1) ^ " and " ^ (string_of_type t2)))
+  | (StringType, _) | (_, StringType) -> StringType
+  | (FloatType, _) | (_, FloatType) -> FloatType
+  | (IntType, _) | (_, IntType) -> IntType
 
 let rec get_type d =
   match d with
@@ -179,25 +186,45 @@ let rec get_type d =
   | FloatData _ -> FloatType
   | StringData _ -> StringType
 
-let make_int d =
+let rec make_int d =
+  let out = ref 0 in
   match d with
-    IntData i -> ([], i)
-  | _ -> ([], ref 0) (* TODO *)
+    ArrayData elems -> raise (Type_mismatch ("cannot use " ^ (string_of_type (get_type d)) ^ " as an int"))
+  | RefData d' -> raise (Type_mismatch ("cannot use " ^ (string_of_type (get_type d)) ^ " as an int"))
+  | IntData i -> ([], i)
+  | BoolData b -> ([Op(fun () -> out := if !b then 1 else 0)], out)
+  | FloatData f -> ([Op(fun () -> out := int_of_float !f)], out)
+  | StringData s -> ([Op(fun () -> out := int_of_string !s)], out)
 
 let make_float d =
+  let out = ref 0.0 in
   match d with
-    FloatData f -> ([], f)
-  | _ -> ([], ref 0.0) (* TODO *)
+    ArrayData elems -> raise (Type_mismatch ("cannot use " ^ (string_of_type (get_type d)) ^ " as a float"))
+  | RefData d' -> raise (Type_mismatch ("cannot use " ^ (string_of_type (get_type d)) ^ " as a float"))
+  | IntData i -> ([Op(fun () -> out := float_of_int !i)], out)
+  | BoolData b -> ([Op(fun () -> out := if !b then 1.0 else 0.0)], out)
+  | FloatData f -> ([], f)
+  | StringData s -> ([Op(fun () -> out := float_of_string !s)], out)
 
 let make_bool d =
+  let out = ref false in
   match d with
-    BoolData b -> ([], b)
-  | _ -> ([], ref false) (* TODO *)
+    ArrayData elems -> raise (Type_mismatch ("cannot use " ^ (string_of_type (get_type d)) ^ " as a bool"))
+  | RefData d' -> raise (Type_mismatch ("cannot use " ^ (string_of_type (get_type d)) ^ " as a bool"))
+  | IntData i -> ([Op(fun () -> out := !i != 0)], out)
+  | BoolData b -> ([], b)
+  | FloatData f -> ([Op(fun () -> out := !f != 0.)], out)
+  | StringData s -> ([Op(fun () -> out := (String.length !s) > 0)], out)
 
 let make_string d =
+  let out = ref "" in
   match d with
-    StringData s -> ([], s)
-  | _ -> ([], ref "") (* TODO *)
+    ArrayData elems -> raise (Type_mismatch ("cannot use " ^ (string_of_type (get_type d)) ^ " as a string"))
+  | RefData d' -> raise (Type_mismatch ("cannot use " ^ (string_of_type (get_type d)) ^ " as a string"))
+  | IntData i -> ([Op(fun () -> out := string_of_int !i)], out)
+  | BoolData b -> ([Op(fun () -> out := string_of_bool !b)], out)
+  | FloatData f -> ([Op(fun () -> out := string_of_float !f)], out)
+  | StringData s -> ([], s)
 
 let rec compile_expr cntxt expr =
   match expr with
@@ -248,6 +275,7 @@ let rec compile_expr cntxt expr =
   | Time (e1, e2) -> raise (Not_implemented "cannot compile time expressions")
   | Declaration decls -> raise (Compiler_error "declaration wasn't extracted earlier")
 
+(* prints a list of expressions (used for compiling print statements) *)
 let print_data args () =
   let rec pair_of_data d =
     match d with

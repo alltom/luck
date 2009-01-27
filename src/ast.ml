@@ -53,7 +53,7 @@ type
   | ExprStatement of expr
   | ValuedReturn of expr
   | Return
-  | Print of expr
+  | Print of expr list
   | While of expr * stmt list
   | Do of stmt list * expr
   | Until of expr * stmt list

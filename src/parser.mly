@@ -91,7 +91,7 @@ statement:
 | exp SEMICOLON { ExprStatement($1) }
 | RETURN SEMICOLON { Return }
 | RETURN exp SEMICOLON { ValuedReturn($2) }
-| LARROWS exp RARROWS SEMICOLON { Print($2) }
+| LARROWS exp RARROWS SEMICOLON { Print(commas_to_list $2) }
 | WHILE LPAREN exp RPAREN blockornot { While($3, $5) }
 | DO block WHILE LPAREN exp RPAREN SEMICOLON { Do($2, $5) }
 | UNTIL LPAREN exp RPAREN blockornot { Until($3, $5) }

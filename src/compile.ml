@@ -15,6 +15,7 @@ type data =
 
 module Context = Map.Make(String)
 
+exception Compiler_error (* something went wrong internally *)
 exception Type_declaration
 exception Variable_initialization
 exception Redeclaration
@@ -120,7 +121,11 @@ let rec extract_expr_cntxt expr =
 let rec extract_stmt_cntxt stmt =
   match stmt with
     Ast.ExprStatement e -> let (c, e', i) = extract_expr_cntxt e in (c, Ast.ExprStatement e', i)
-  | Ast.Print e -> let (c, e', i) = extract_expr_cntxt e in (c, Ast.Print e', i)
+  | Ast.Print args ->
+      let (c, e, i) = extract_expr_cntxt (Ast.Comma args) in
+      (match e with
+         Ast.Comma args' -> (c, Ast.Print args', i)
+       | _ -> raise Compiler_error)
   | _ -> (Context.empty, stmt, [])
 
 (* rough outline:

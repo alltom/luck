@@ -21,11 +21,12 @@ type instruction =
 
 module Context = Map.Make(String)
 
-exception Compiler_error (* something went wrong internally *)
+exception Compiler_error of string (* something went wrong internally *)
 exception Not_implemented
 exception Type_declaration
 exception Variable_initialization
 exception Redeclaration
+exception Undeclared_variable of string (* name of undeclared variable *)
 
 let rec string_of_type t =
   match t with
@@ -126,19 +127,19 @@ let rec extract_expr_cntxt expr =
 (* extract declarations from sub-expressions which aren't contained by
    the statement itself. for exaxmple, "int a" would be extracted from
    "<<< 4 => int a >>>" but not from "for(0 => int a;;);" *)
-let rec extract_stmt_cntxt stmt =
+let rec extract_stmt_cntxt local_cntxt stmt =
   match stmt with
     ExprStatement e -> let (c, e', i) = extract_expr_cntxt e in (c, ExprStatement e', i)
   | Print args ->
       let (c, e, i) = extract_expr_cntxt (Comma args) in
       (match e with
          Comma args' -> (c, Print args', i)
-       | _ -> raise Compiler_error)
+       | _ -> raise (Compiler_error "extract_expr_cntxt returned wrong expr"))
   | _ -> (Context.empty, stmt, [])
 
 let compile_expr cntxt expr =
   match expr with
-    Declaration decls -> raise Compiler_error (* should have been removed when context was extracted *)
+    Declaration decls -> raise (Compiler_error "declaration wasn't extracted earlier")
   | NullExpression -> ([], BoolData(ref true)) (* used only in for() w/blank exprs *)
   | Int i -> ([], IntData(ref i))
   | Float f -> ([], FloatData(ref f))
@@ -146,25 +147,11 @@ let compile_expr cntxt expr =
   | String s -> ([], StringData(ref s))
   | Var name ->
       (try let (_, d) = Context.find name cntxt in ([], d)
-       with Not_found -> raise Compiler_error)
+       with Not_found -> raise (Undeclared_variable name))
   | _ -> raise Not_implemented
 
-(*
-  | Array of expr list
-  | Comma of expr list
-  | UnaryExpr of unary_op * expr
-  | BinaryExpr of binary_op * expr * expr
-  | Member of expr * string
-  | FunCall of expr * expr list
-  | Cast of expr * typ
-  | Spork of expr
-  | Trinary of expr * expr * expr
-  | Declaration of decl
-*)
-
-(* TODO: take local context (non-overwritable) as well as parent context *)
-let compile_stmt parent_cntxt stmt =
-  let (subcntxt, stmt', init_instrs) = extract_stmt_cntxt stmt in
+let compile_stmt parent_cntxt local_cntxt stmt =
+  let (subcntxt, stmt', init_instrs) = extract_stmt_cntxt local_cntxt stmt in
   let cntxt = combine_cntxts true parent_cntxt subcntxt in
   let instrs = match stmt' with
       NullStatement -> []
@@ -178,10 +165,11 @@ let compile_stmt parent_cntxt stmt =
   (subcntxt, init_instrs @ instrs)
 
 let compile (AST(fns, classes, stmts)) =
-  let cntxt = ref Context.empty in (* TODO: should be context containing fns and classes *)
+  let parent_cntxt = Context.empty in (* TODO: should be context containing fns and classes *)
+  let local_cntxt = ref Context.empty in
   let compile_stmt instrs stmt =
-    let (cntxt', instrs') = compile_stmt !cntxt stmt in
-    cntxt := combine_cntxts true !cntxt cntxt';
+    let (cntxt', instrs') = compile_stmt parent_cntxt !local_cntxt stmt in
+    local_cntxt := combine_cntxts false !local_cntxt cntxt';
     instrs @ instrs'
   in
   List.fold_left compile_stmt [] stmts

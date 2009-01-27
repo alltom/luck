@@ -250,21 +250,18 @@ let rec compile_expr cntxt expr =
         exprs
   | UnaryExpr (op, e1) -> raise (Not_implemented "cannot compile unary expressions")
   | BinaryExpr (op, e1, e2) ->
-      let bin_instr f l r out () = out := f !l !r in
       let (i1, d1) = compile_expr cntxt e1 in
       let (i2, d2) = compile_expr cntxt e2 in
+      let compile_binop (i1', l) (i2', r) out plusf dataf =
+        (i1 @ i2 @ i1' @ i2' @ [Op(fun () -> out := plusf !l !r)], dataf out)
+      in
       (match op with
          Plus ->
            let t = promote_type (get_type d1) (get_type d2) in
-           let compile_plus convf out plusf dataf =
-             let (i1', l) = convf d1 in
-             let (i2', r) = convf d2 in
-             (i1 @ i2 @ i1' @ i2' @ [Op(bin_instr plusf l r out)], dataf out)
-           in
            (match t with
-              IntType -> compile_plus make_int (ref 0) (+) (fun o -> IntData o)
-            | FloatType -> compile_plus make_float (ref 0.0) (+.) (fun o -> FloatData o)
-            | StringType -> compile_plus make_string (ref "") (^) (fun o -> StringData o)
+              IntType -> compile_binop (make_int d1) (make_int d2) (ref 0) (+) (fun o -> IntData o)
+            | FloatType -> compile_binop (make_float d1) (make_float d2) (ref 0.0) (+.) (fun o -> FloatData o)
+            | StringType -> compile_binop (make_string d1) (make_string d2) (ref "") (^) (fun o -> StringData o)
             | _ -> raise (Type_mismatch ("cannot compile " ^ (string_of_type t) ^ " + " ^ (string_of_type t))))
        | _ -> raise (Not_implemented "cannot compile this type of binary expression"))
   | Member (e1, mem) -> raise (Not_implemented "cannot compile member expressions")

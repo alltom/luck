@@ -22,7 +22,6 @@
   TEST
     $ omake test
     $ ./parser_test
-    $ ./compile_test
 
   DO SOMETHING
     $ ./luck

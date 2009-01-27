@@ -36,7 +36,6 @@ OCamlGeneratedFiles(parser.ml parser.mli lexer.ml)
 
 TESTS[] =
    $(OCamlProgram parser_test, parser lexer ast parser_test)
-   $(OCamlProgram compile_test, ast compile compile_test)
 
 .PHONY: test
 test: $(TESTS)

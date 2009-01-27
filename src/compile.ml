@@ -162,13 +162,22 @@ let rec extract_stmt_cntxt local_cntxt stmt =
 (* returns the type which best covers t1 and t2 *)
 let rec promote_type t1 t2 =
   match (t1, t2) with
-    (ArrayType t1', ArrayType t2') -> promote_type t1' t2'
-  | (RefType t1', RefType t2') -> promote_type t1' t2'
+    (ArrayType t1', ArrayType t2') -> ArrayType(promote_type t1' t2')
+  | (RefType t1', RefType t2') -> RefType(promote_type t1' t2')
   | (IntType, IntType) -> IntType
   | (FloatType, FloatType) -> FloatType
   | (BoolType, BoolType) -> BoolType
   | (StringType, StringType) -> StringType
   | _ -> raise (Type_mismatch ("incompatible types " ^ (string_of_type t1) ^ " and " ^ (string_of_type t2)))
+
+let rec get_type d =
+  match d with
+    ArrayData elems -> ArrayType (get_type (Array.get !elems 0))
+  | RefData d' -> RefType (get_type !d')
+  | IntData _ -> IntType
+  | BoolData _ -> BoolType
+  | FloatData _ -> FloatType
+  | StringData _ -> StringType
 
 let make_int d =
   match d with
@@ -214,24 +223,22 @@ let rec compile_expr cntxt expr =
         exprs
   | UnaryExpr (op, e1) -> raise (Not_implemented "cannot compile unary expressions")
   | BinaryExpr (op, e1, e2) ->
+      let bin_instr f l r out () = out := f !l !r in
       let (i1, d1) = compile_expr cntxt e1 in
       let (i2, d2) = compile_expr cntxt e2 in
-      (*
-      let helper out coercefn instrfn =
-        let (i1', d1') = coercefn d1 in
-        let (i2', d2') = coercefn d2 in
-        (i1 @ i2 @ i1' @ i2' @ [instrfn (binop_of_astbinop op) d1' d2' out], out)
-      in
-      *)
-      (match promote_type (get_type cntxt e1) (get_type cntxt e2) with
-         ArrayType elems -> raise (Not_implemented "cannot compile binary expression with arrays")
-       | RefType d -> raise (Not_implemented "cannot compile binary expression with reference types")
-       | IntType -> raise (Not_implemented "cannot compile binary expression with int types")
-       | FloatType -> raise (Not_implemented "cannot compile binary expression with float types")
-       | BoolType -> raise (Not_implemented "cannot compile binary expression with bool types")
-       | StringType -> raise (Not_implemented "cannot compile binary expression with string types")
-       )
-       *)
+      (match op with
+         Plus ->
+           let t = promote_type (get_type d1) (get_type d2) in
+           let compile_plus convf out plusf dataf =
+             let (i1', l) = convf d1 in
+             let (i2', r) = convf d2 in
+             (i1 @ i2 @ i1' @ i2' @ [Op(bin_instr plusf l r out)], dataf out)
+           in
+           (match t with
+              IntType -> compile_plus make_int (ref 0) (+) (fun o -> IntData o)
+            | FloatType -> compile_plus make_float (ref 0.0) (+.) (fun o -> FloatData o)
+            | _ -> raise (Not_implemented "cannot compile + with these types"))
+       | _ -> raise (Not_implemented "cannot compile this type of binary expression"))
   | Member (e1, mem) -> raise (Not_implemented "cannot compile member expressions")
   | FunCall (e1, args) -> raise (Not_implemented "cannot compile function calls")
   | Cast (e1, t) -> raise (Not_implemented "cannot compile casts")
@@ -241,6 +248,21 @@ let rec compile_expr cntxt expr =
   | Time (e1, e2) -> raise (Not_implemented "cannot compile time expressions")
   | Declaration decls -> raise (Compiler_error "declaration wasn't extracted earlier")
 
+let print_data args () =
+  let rec pair_of_data d =
+    match d with
+      ArrayData arr -> ("array", "array")
+    | RefData d' -> let (v, t) = pair_of_data !d' in (v, t ^ " ref")
+    | IntData i -> (string_of_int !i, "int")
+    | BoolData b -> (string_of_bool !b, "bool")
+    | FloatData f -> (string_of_float !f, "float")
+    | StringData s -> (!s, "string")
+  in
+  let string_of_pair (v, t) = v ^ " :(" ^ t ^ ")" in
+  print_endline (match args with
+    d :: [] -> string_of_pair (pair_of_data d)
+  | _ -> String.concat " " (List.map (fun d -> let (v, _) = pair_of_data d in v) args))
+
 let compile_stmt parent_cntxt local_cntxt stmt =
   let (subcntxt, stmt', init_instrs) = extract_stmt_cntxt local_cntxt stmt in
   let cntxt = combine_cntxts true parent_cntxt subcntxt in
@@ -248,13 +270,11 @@ let compile_stmt parent_cntxt local_cntxt stmt =
   let instrs =
     match stmt' with
       NullStatement -> []
-    | Print args -> raise (Not_implemented "cannot compile print statements")
-        (*
+    | Print args ->
         let compiled_exprs = List.map (fun e -> compile_expr cntxt e) args in
         let instrs = List.fold_left (fun i (i', _) -> i @ i') [] compiled_exprs in
         let args' = List.map (fun (_, d) -> d) compiled_exprs in
-        instrs @ [PrintInstr args']
-        *)
+        instrs @ [Op(print_data args')]
     | _ -> raise (Not_implemented "cannot compile this type of statement")
   in
   (subcntxt, init_instrs @ instrs)

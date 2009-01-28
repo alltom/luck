@@ -8,13 +8,17 @@ type typ =
 | RefType of typ
 | IntType | FloatType | BoolType | StringType
 
+(* boxes! used during compilation (and in easy-to-please statements
+   like <<< >>>) to keep OCaml's type checker happy. Each of these are
+   (ref ref) so that the same instructions can be executed multiple
+   times, each instance creating its own inner reference. *)
 type data =
-  ArrayData of data array ref
-| RefData of data ref
-| IntData of int ref
-| BoolData of bool ref
-| FloatData of float ref
-| StringData of string ref
+  ArrayData of data array ref ref
+| RefData of data ref ref
+| IntData of int ref ref
+| BoolData of bool ref ref
+| FloatData of float ref ref
+| StringData of string ref ref
 
 type instruction =
   Op of (unit -> unit)
@@ -42,11 +46,11 @@ let strings_of_cntxt cntxt =
 let rec string_of_data d =
   match d with
     ArrayData elems -> "array"
-  | RefData d' -> "ref " ^ (string_of_data !d')
-  | IntData i -> "int " ^ (string_of_int !i)
-  | BoolData b -> "bool " ^ (string_of_bool !b)
-  | FloatData f -> "float " ^ (string_of_float !f)
-  | StringData s -> "string \"" ^ !s ^ "\""
+  | RefData d' -> "ref " ^ (string_of_data !(!d'))
+  | IntData i -> "int " ^ (string_of_int !(!i))
+  | BoolData b -> "bool " ^ (string_of_bool !(!b))
+  | FloatData f -> "float " ^ (string_of_float !(!f))
+  | StringData s -> "string \"" ^ !(!s) ^ "\""
 
 (* returns the converted data type, an initialized data storage location,
    and the instructions to execute to finish initialization (for non-primitives
@@ -54,15 +58,15 @@ let rec string_of_data d =
    before the initialization statements are executed. *)
 let rec instantiate_type asttype =
   match asttype with
-    Type("int", false, _, []) -> (IntType, IntData(ref 0), [])
-  | Type("float", false, _, []) -> (FloatType, FloatData(ref 0.0), [])
-  | Type("string", false, _, []) -> (StringType, StringData(ref ""), [])
+    Type("int", false, _, []) -> (IntType, IntData(ref (ref 0)), [])
+  | Type("float", false, _, []) -> (FloatType, FloatData(ref (ref 0.0)), [])
+  | Type("string", false, _, []) -> (StringType, StringData(ref (ref "")), [])
   | Type(t, true, s, a) ->
       let (t', d, s) = instantiate_type (Type(t, false, s, a)) in
-      (RefType t', RefData(ref d), s)
+      (RefType t', RefData(ref (ref d)), s)
   | Type(t, false, s, h::r) ->
       let (t', d, s) = instantiate_type (Type(t, false, s, r)) in
-      (ArrayType t', ArrayData (ref (Array.make 0 d)), s) (* TODO: instructions for intitializing properly *)
+      (ArrayType t', ArrayData (ref (ref (Array.make 0 d))), s) (* TODO: instructions for intitializing properly *)
   | _ -> raise (Not_implemented "cannot instantiate this type")
 
 (* returns a context, and its initialization code *)
@@ -179,60 +183,64 @@ let rec promote_type t1 t2 =
 
 let rec get_type d =
   match d with
-    ArrayData elems -> ArrayType (get_type (Array.get !elems 0))
-  | RefData d' -> RefType (get_type !d')
+    ArrayData elems -> ArrayType (get_type (Array.get !(!elems) 0)) (* TODO: dAnGeRoUs *)
+  | RefData d' -> RefType (get_type !(!d'))
   | IntData _ -> IntType
   | BoolData _ -> BoolType
   | FloatData _ -> FloatType
   | StringData _ -> StringType
 
+(* the make_* functions generate instructions to cast from a data's
+   original time to the wanted type, and returns a reference to the
+   converted data itself (not its box) *)
+
 let rec make_int d =
-  let out = ref 0 in
+  let out = ref (ref 0) in
   match d with
     ArrayData elems -> raise (Type_mismatch ("cannot use " ^ (string_of_type (get_type d)) ^ " as an int"))
   | RefData d' -> raise (Type_mismatch ("cannot use " ^ (string_of_type (get_type d)) ^ " as an int"))
   | IntData i -> ([], i)
-  | BoolData b -> ([Op(fun () -> out := if !b then 1 else 0)], out)
-  | FloatData f -> ([Op(fun () -> out := int_of_float !f)], out)
-  | StringData s -> ([Op(fun () -> out := int_of_string !s)], out)
+  | BoolData b -> ([Op(fun () -> out := ref (if !(!b) then 1 else 0))], out)
+  | FloatData f -> ([Op(fun () -> out := ref (int_of_float !(!f)))], out)
+  | StringData s -> ([Op(fun () -> out := ref (int_of_string !(!s)))], out)
 
 let make_float d =
-  let out = ref 0.0 in
+  let out = ref (ref 0.0) in
   match d with
     ArrayData elems -> raise (Type_mismatch ("cannot use " ^ (string_of_type (get_type d)) ^ " as a float"))
   | RefData d' -> raise (Type_mismatch ("cannot use " ^ (string_of_type (get_type d)) ^ " as a float"))
-  | IntData i -> ([Op(fun () -> out := float_of_int !i)], out)
-  | BoolData b -> ([Op(fun () -> out := if !b then 1.0 else 0.0)], out)
+  | IntData i -> ([Op(fun () -> out := ref (float_of_int !(!i)))], out)
+  | BoolData b -> ([Op(fun () -> out := ref (if !(!b) then 1.0 else 0.0))], out)
   | FloatData f -> ([], f)
-  | StringData s -> ([Op(fun () -> out := float_of_string !s)], out)
+  | StringData s -> ([Op(fun () -> out := ref (float_of_string !(!s)))], out)
 
 let make_bool d =
-  let out = ref false in
+  let out = ref (ref false) in
   match d with
     ArrayData elems -> raise (Type_mismatch ("cannot use " ^ (string_of_type (get_type d)) ^ " as a bool"))
   | RefData d' -> raise (Type_mismatch ("cannot use " ^ (string_of_type (get_type d)) ^ " as a bool"))
-  | IntData i -> ([Op(fun () -> out := !i != 0)], out)
+  | IntData i -> ([Op(fun () -> out := ref (!(!i) != 0))], out)
   | BoolData b -> ([], b)
-  | FloatData f -> ([Op(fun () -> out := !f != 0.)], out)
-  | StringData s -> ([Op(fun () -> out := (String.length !s) > 0)], out)
+  | FloatData f -> ([Op(fun () -> out := ref (!(!f) != 0.))], out)
+  | StringData s -> ([Op(fun () -> out := ref ((String.length !(!s)) > 0))], out)
 
 let make_string d =
-  let out = ref "" in
+  let out = ref (ref "") in
   match d with
     ArrayData elems -> raise (Type_mismatch ("cannot use " ^ (string_of_type (get_type d)) ^ " as a string"))
   | RefData d' -> raise (Type_mismatch ("cannot use " ^ (string_of_type (get_type d)) ^ " as a string"))
-  | IntData i -> ([Op(fun () -> out := string_of_int !i)], out)
-  | BoolData b -> ([Op(fun () -> out := string_of_bool !b)], out)
-  | FloatData f -> ([Op(fun () -> out := string_of_float !f)], out)
+  | IntData i -> ([Op(fun () -> out := ref (string_of_int !(!i)))], out)
+  | BoolData b -> ([Op(fun () -> out := ref (string_of_bool !(!b)))], out)
+  | FloatData f -> ([Op(fun () -> out := ref (string_of_float !(!f)))], out)
   | StringData s -> ([], s)
 
 let rec compile_expr cntxt expr =
   match expr with
-    NullExpression -> ([], BoolData(ref true)) (* used only in for() w/blank exprs *)
-  | Int i -> ([], IntData(ref i))
-  | Float f -> ([], FloatData(ref f))
-  | Bool b -> ([], BoolData(ref b))
-  | String s -> ([], StringData(ref s))
+    NullExpression -> ([], BoolData(ref (ref true))) (* used only in for() w/blank exprs *)
+  | Int i -> ([], IntData(ref (ref i)))
+  | Float f -> ([], FloatData(ref (ref f)))
+  | Bool b -> ([], BoolData(ref (ref b)))
+  | String s -> ([], StringData(ref (ref s)))
   | Var name ->
       (try let (_, d) = Context.find name cntxt in ([], d)
        with Not_found -> raise (Undeclared_variable name))
@@ -246,7 +254,7 @@ let rec compile_expr cntxt expr =
   | Comma exprs ->
       List.fold_left
         (fun (i, d) e -> let (i', d) = compile_expr cntxt e in (i @ i', d))
-        ([], IntData(ref 0)) (* the data on the right here is a placeholder, overwritten by fun above *)
+        ([], IntData(ref (ref 0))) (* the data on the right here is a placeholder, overwritten by fun above *)
         exprs
   | UnaryExpr (op, e1) -> raise (Not_implemented "cannot compile unary expressions")
   | BinaryExpr (op, e1, e2) ->
@@ -255,13 +263,14 @@ let rec compile_expr cntxt expr =
       let t1 = get_type d1 in
       let t2 = get_type d2 in
       let t = promote_type t1 t2 in
-      let compile_binop (i1', l) (i2', r) out dataf f =
-        (i1 @ i2 @ i1' @ i2' @ [Op(fun () -> out := f !l !r)], dataf out)
+      let compile_binop (i1', l) (i2', r) v dataf f =
+        let out = ref (ref v) in
+        (i1 @ i2 @ i1' @ i2' @ [Op(fun () -> out := ref (f !(!l) !(!r)))], dataf out)
       in
-      let ints = compile_binop (make_int d1) (make_int d2) (ref 0) (fun o -> IntData o) in
-      let floats = compile_binop (make_float d1) (make_float d2) (ref 0.0) (fun o -> FloatData o) in
-      let strings = compile_binop (make_string d1) (make_string d2) (ref "") (fun o -> StringData o) in
-      let bools = compile_binop (make_bool d1) (make_bool d2) (ref false) (fun o -> BoolData o) in
+      let ints = compile_binop (make_int d1) (make_int d2) 0 (fun o -> IntData o) in
+      let floats = compile_binop (make_float d1) (make_float d2) 0.0 (fun o -> FloatData o) in
+      let strings = compile_binop (make_string d1) (make_string d2) "" (fun o -> StringData o) in
+      let bools = compile_binop (make_bool d1) (make_bool d2) false (fun o -> BoolData o) in
       let fail op = raise (Type_mismatch ("cannot compile " ^ (string_of_type t1) ^ " " ^ op ^ " " ^ (string_of_type t2))) in
       (match op with
          Plus -> (match t with
@@ -287,35 +296,35 @@ let rec compile_expr cntxt expr =
        | BinaryAnd -> bools (&&)
        | LessThan ->
            (match t with
-              IntType -> compile_binop (make_int d1) (make_int d2) (ref false) (fun o -> BoolData o) (<)
-            | FloatType -> compile_binop (make_float d1) (make_float d2) (ref false) (fun o -> BoolData o) (<)
+              IntType -> compile_binop (make_int d1) (make_int d2) false (fun o -> BoolData o) (<)
+            | FloatType -> compile_binop (make_float d1) (make_float d2) false (fun o -> BoolData o) (<)
             | _ -> fail "<")
        | LessThanOrEqualTo ->
            (match t with
-              IntType -> compile_binop (make_int d1) (make_int d2) (ref false) (fun o -> BoolData o) (<)
-            | FloatType -> compile_binop (make_float d1) (make_float d2) (ref false) (fun o -> BoolData o) (<)
+              IntType -> compile_binop (make_int d1) (make_int d2) false (fun o -> BoolData o) (<)
+            | FloatType -> compile_binop (make_float d1) (make_float d2) false (fun o -> BoolData o) (<)
             | _ -> fail "<=")
        | GreaterThan ->
            (match t with
-              IntType -> compile_binop (make_int d1) (make_int d2) (ref false) (fun o -> BoolData o) (>)
-            | FloatType -> compile_binop (make_float d1) (make_float d2) (ref false) (fun o -> BoolData o) (>)
+              IntType -> compile_binop (make_int d1) (make_int d2) false (fun o -> BoolData o) (>)
+            | FloatType -> compile_binop (make_float d1) (make_float d2) false (fun o -> BoolData o) (>)
             | _ -> fail "<")
        | GreaterThanOrEqualTo ->
            (match t with
-              IntType -> compile_binop (make_int d1) (make_int d2) (ref false) (fun o -> BoolData o) (>=)
-            | FloatType -> compile_binop (make_float d1) (make_float d2) (ref false) (fun o -> BoolData o) (>=)
+              IntType -> compile_binop (make_int d1) (make_int d2) false (fun o -> BoolData o) (>=)
+            | FloatType -> compile_binop (make_float d1) (make_float d2) false (fun o -> BoolData o) (>=)
             | _ -> fail "<=")
        | Equals ->
            (match t with
-              IntType -> compile_binop (make_int d1) (make_int d2) (ref false) (fun o -> BoolData o) (=)
-            | FloatType -> compile_binop (make_float d1) (make_float d2) (ref false) (fun o -> BoolData o) (=)
-            | StringType -> compile_binop (make_string d1) (make_string d2) (ref false) (fun o -> BoolData o) (=)
+              IntType -> compile_binop (make_int d1) (make_int d2) false (fun o -> BoolData o) (=)
+            | FloatType -> compile_binop (make_float d1) (make_float d2) false (fun o -> BoolData o) (=)
+            | StringType -> compile_binop (make_string d1) (make_string d2) false (fun o -> BoolData o) (=)
             | _ -> fail "=")
        | NotEquals ->
            (match t with
-              IntType -> compile_binop (make_int d1) (make_int d2) (ref false) (fun o -> BoolData o) (<>)
-            | FloatType -> compile_binop (make_float d1) (make_float d2) (ref false) (fun o -> BoolData o) (<>)
-            | StringType -> compile_binop (make_string d1) (make_string d2) (ref false) (fun o -> BoolData o) (<>)
+              IntType -> compile_binop (make_int d1) (make_int d2) false (fun o -> BoolData o) (<>)
+            | FloatType -> compile_binop (make_float d1) (make_float d2) false (fun o -> BoolData o) (<>)
+            | StringType -> compile_binop (make_string d1) (make_string d2) false (fun o -> BoolData o) (<>)
             | _ -> fail "!=")
        | _ -> raise (Not_implemented "cannot compile this type of binary expression"))
   | Member (e1, mem) -> raise (Not_implemented "cannot compile member expressions")
@@ -332,11 +341,11 @@ let print_data args () =
   let rec pair_of_data d =
     match d with
       ArrayData arr -> ("array", "array")
-    | RefData d' -> let (v, t) = pair_of_data !d' in (v, t ^ " ref")
-    | IntData i -> (string_of_int !i, "int")
-    | BoolData b -> (string_of_bool !b, "bool")
-    | FloatData f -> (string_of_float !f, "float")
-    | StringData s -> (!s, "string")
+    | RefData d' -> let (v, t) = pair_of_data !(!d') in (v, t ^ " ref")
+    | IntData i -> (string_of_int !(!i), "int")
+    | BoolData b -> (string_of_bool !(!b), "bool")
+    | FloatData f -> (string_of_float !(!f), "float")
+    | StringData s -> (!(!s), "string")
   in
   let string_of_pair (v, t) = v ^ " :(" ^ t ^ ")" in
   print_endline (match args with

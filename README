@@ -32,9 +32,10 @@
           (probably this one)
 
        [[things that work]]
-           <<< 4 + 10 >>>;
-           <<< 2 + 4 * 10 >>>;
-           <<< "boy!" >>>;
-           <<< "I am " + (5 + 2) + " years old" >>>;
-           <<< "I am", (5 + 2), "years old" >>>;
+           2 => int things;
+           <<< things >>>;
+           <<< things + 1 >>>;
+           <<< "a string!" >>>;
+           <<< "LucK can do " + things + " things!" >>>;
+           <<< "LucK can do", things, "things!" >>>;
            <<< "LucK is basically a calculator" >>>;

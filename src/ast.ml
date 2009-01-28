@@ -57,6 +57,7 @@ type
   | While of expr * stmt list
   | Do of stmt list * expr
   | Until of expr * stmt list
+  | Repeat of expr * stmt list
   | If of expr * stmt list * stmt list
   | For of expr * expr * expr * stmt list
   and
@@ -105,6 +106,7 @@ let rec string_of_stmt stmt =
   | While (e, stmts) -> "while(.){.}"
   | Do (stmts, e) -> "do{.}while(.);"
   | Until (e, stmts) -> "until(.){.};"
+  | Repeat (e, stmts) -> "repeat(.){.};"
   | If (e, then_stmts, else_stmts) -> "if(.){.}else{.}"
   | For (e1, e2, e3, stmts) -> "for(.;.;.){.}"
 

@@ -328,7 +328,7 @@ let rec compile_expr cntxt expr =
             | FloatType -> compile_binop (make_float d1) (make_float d2) false (fun o -> BoolData o) (binop (<>))
             | StringType -> compile_binop (make_string d1) (make_string d2) false (fun o -> BoolData o) (binop (<>))
             | _ -> fail "!=")
-       | Chuck ->
+       | Chuck -> (* TODO: you can ChucK to anything, even like "10 => 20" *)
            (match t2 with
               ArrayType t' -> raise (Not_implemented "can't chuck to arrays")
             | RefType t' -> raise (Not_implemented "can't chuck to references")
@@ -368,6 +368,7 @@ let compile_stmt parent_cntxt local_cntxt stmt =
   let instrs =
     match stmt' with
       NullStatement -> []
+    | ExprStatement e -> let (i, _) = compile_expr cntxt e in i
     | Print args ->
         let compiled_exprs = List.map (fun e -> compile_expr cntxt e) args in
         let instrs = List.fold_left (fun i (i', _) -> i @ i') [] compiled_exprs in

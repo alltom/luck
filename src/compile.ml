@@ -254,50 +254,37 @@ let rec compile_expr cntxt expr =
       let (i2, d2) = compile_expr cntxt e2 in
       let t1 = get_type d1 in
       let t2 = get_type d2 in
+      let t = promote_type t1 t2 in
       let compile_binop (i1', l) (i2', r) out dataf f =
         (i1 @ i2 @ i1' @ i2' @ [Op(fun () -> out := f !l !r)], dataf out)
       in
       let ints = compile_binop (make_int d1) (make_int d2) (ref 0) (fun o -> IntData o) in
       let floats = compile_binop (make_float d1) (make_float d2) (ref 0.0) (fun o -> FloatData o) in
       let strings = compile_binop (make_string d1) (make_string d2) (ref "") (fun o -> StringData o) in
+      let bools = compile_binop (make_bool d1) (make_bool d2) (ref false) (fun o -> BoolData o) in
       let fail op = raise (Type_mismatch ("cannot compile " ^ (string_of_type t1) ^ " " ^ op ^ " " ^ (string_of_type t2))) in
       (match op with
-         Plus ->
-           let t = promote_type (get_type d1) (get_type d2) in
-           (match t with
-              IntType -> ints (+)
-            | FloatType -> floats (+.)
-            | StringType -> strings (^)
-            | _ -> fail "+")
-       | Minus ->
-           let t = promote_type (get_type d1) (get_type d2) in
-           (match t with
-              IntType -> ints (-)
-            | FloatType -> floats (-.)
-            | _ -> fail "-")
-       | Multiply ->
-           let t = promote_type (get_type d1) (get_type d2) in
-           (match t with
-              IntType -> ints ( * )
-            | FloatType -> floats ( *. )
-            | _ -> fail "*")
-       | Divide ->
-           let t = promote_type (get_type d1) (get_type d2) in
-           (match t with
-              IntType -> ints (/)
-            | FloatType -> floats (/.)
-            | _ -> fail "/")
-       | Modulo ->
-           let t = promote_type (get_type d1) (get_type d2) in
-           (match t with
-              IntType -> ints (mod)
-            | _ -> fail "%")
-       | Exponentiate ->
-           let t = promote_type (get_type d1) (get_type d2) in
-           (match t with
-              IntType -> floats ( ** )
-            | FloatType -> floats ( ** )
-            | _ -> fail "^")
+         Plus -> (match t with
+                    IntType -> ints (+)
+                  | FloatType -> floats (+.)
+                  | StringType -> strings (^)
+                  | _ -> fail "+")
+       | Minus -> (match t with
+                     IntType -> ints (-)
+                   | FloatType -> floats (-.)
+                   | _ -> fail "-")
+       | Multiply -> (match t with
+                        IntType -> ints ( * )
+                      | FloatType -> floats ( *. )
+                      | _ -> fail "*")
+       | Divide -> (match t with
+                      IntType -> ints (/)
+                    | FloatType -> floats (/.)
+                    | _ -> fail "/")
+       | Modulo -> (match t with IntType -> ints (mod) | _ -> fail "%")
+       | Exponentiate -> (match t with IntType | FloatType -> floats ( ** ) | _ -> fail "^")
+       | BinaryOr -> bools (||)
+       | BinaryAnd -> bools (&&)
        | _ -> raise (Not_implemented "cannot compile this type of binary expression"))
   | Member (e1, mem) -> raise (Not_implemented "cannot compile member expressions")
   | FunCall (e1, args) -> raise (Not_implemented "cannot compile function calls")

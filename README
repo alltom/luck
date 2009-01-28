@@ -30,4 +30,11 @@
        or yells at you if it's not valid
           of if it didn't know how to compile all of it yet
           (probably this one)
-       so much anger!
+
+       [[things that work]]
+           <<< 4 + 10 >>>;
+           <<< 2 + 4 * 10 >>>;
+           <<< "boy!" >>>;
+           <<< "I am " + (5 + 2) + " years old" >>>;
+           <<< "I am", (5 + 2), "years old" >>>;
+           <<< "LucK is basically a calculator" >>>;

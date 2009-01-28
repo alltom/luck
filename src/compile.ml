@@ -337,20 +337,20 @@ let rec compile_expr cntxt expr =
   | Declaration decls -> raise (Compiler_error "declaration wasn't extracted earlier")
 
 (* prints a list of expressions (used for compiling print statements) *)
-let print_data args () =
+let print_data args =
   let rec pair_of_data d =
     match d with
-      ArrayData arr -> ("array", "array")
+      ArrayData arr -> ((fun () -> "array"), "array")
     | RefData d' -> let (v, t) = pair_of_data !(!d') in (v, t ^ " ref")
-    | IntData i -> (string_of_int !(!i), "int")
-    | BoolData b -> (string_of_bool !(!b), "bool")
-    | FloatData f -> (string_of_float !(!f), "float")
-    | StringData s -> (!(!s), "string")
+    | IntData i -> ((fun () -> string_of_int !(!i)), "int")
+    | BoolData b -> ((fun () -> string_of_bool !(!b)), "bool")
+    | FloatData f -> ((fun () -> string_of_float !(!f)), "float")
+    | StringData s -> ((fun () -> !(!s)), "string")
   in
-  let string_of_pair (v, t) = v ^ " :(" ^ t ^ ")" in
-  print_endline (match args with
-    d :: [] -> string_of_pair (pair_of_data d)
-  | _ -> String.concat " " (List.map (fun d -> let (v, _) = pair_of_data d in v) args))
+  let pairs = List.map (fun d -> pair_of_data d) args in
+  match pairs with
+    (v, t) :: [] -> fun () -> print_endline ((v ()) ^ " :(" ^ t ^ ")")
+  | _ -> fun () -> print_endline (String.concat " " (List.map (fun (v, _) -> v ()) pairs))
 
 let compile_stmt parent_cntxt local_cntxt stmt =
   let (subcntxt, stmt', init_instrs) = extract_stmt_cntxt stmt in

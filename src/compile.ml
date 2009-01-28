@@ -285,6 +285,38 @@ let rec compile_expr cntxt expr =
        | Exponentiate -> (match t with IntType | FloatType -> floats ( ** ) | _ -> fail "^")
        | BinaryOr -> bools (||)
        | BinaryAnd -> bools (&&)
+       | LessThan ->
+           (match t with
+              IntType -> compile_binop (make_int d1) (make_int d2) (ref false) (fun o -> BoolData o) (<)
+            | FloatType -> compile_binop (make_float d1) (make_float d2) (ref false) (fun o -> BoolData o) (<)
+            | _ -> fail "<")
+       | LessThanOrEqualTo ->
+           (match t with
+              IntType -> compile_binop (make_int d1) (make_int d2) (ref false) (fun o -> BoolData o) (<)
+            | FloatType -> compile_binop (make_float d1) (make_float d2) (ref false) (fun o -> BoolData o) (<)
+            | _ -> fail "<=")
+       | GreaterThan ->
+           (match t with
+              IntType -> compile_binop (make_int d1) (make_int d2) (ref false) (fun o -> BoolData o) (>)
+            | FloatType -> compile_binop (make_float d1) (make_float d2) (ref false) (fun o -> BoolData o) (>)
+            | _ -> fail "<")
+       | GreaterThanOrEqualTo ->
+           (match t with
+              IntType -> compile_binop (make_int d1) (make_int d2) (ref false) (fun o -> BoolData o) (>=)
+            | FloatType -> compile_binop (make_float d1) (make_float d2) (ref false) (fun o -> BoolData o) (>=)
+            | _ -> fail "<=")
+       | Equals ->
+           (match t with
+              IntType -> compile_binop (make_int d1) (make_int d2) (ref false) (fun o -> BoolData o) (=)
+            | FloatType -> compile_binop (make_float d1) (make_float d2) (ref false) (fun o -> BoolData o) (=)
+            | StringType -> compile_binop (make_string d1) (make_string d2) (ref false) (fun o -> BoolData o) (=)
+            | _ -> fail "=")
+       | NotEquals ->
+           (match t with
+              IntType -> compile_binop (make_int d1) (make_int d2) (ref false) (fun o -> BoolData o) (<>)
+            | FloatType -> compile_binop (make_float d1) (make_float d2) (ref false) (fun o -> BoolData o) (<>)
+            | StringType -> compile_binop (make_string d1) (make_string d2) (ref false) (fun o -> BoolData o) (<>)
+            | _ -> fail "!=")
        | _ -> raise (Not_implemented "cannot compile this type of binary expression"))
   | Member (e1, mem) -> raise (Not_implemented "cannot compile member expressions")
   | FunCall (e1, args) -> raise (Not_implemented "cannot compile function calls")

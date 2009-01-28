@@ -281,6 +281,17 @@ let rec compile_expr cntxt expr =
               IntType -> compile_binop (make_int d1) (make_int d2) (ref 0) (/) (fun o -> IntData o)
             | FloatType -> compile_binop (make_float d1) (make_float d2) (ref 0.0) (/.) (fun o -> FloatData o)
             | _ -> raise (Type_mismatch ("cannot compile " ^ (string_of_type t) ^ " / " ^ (string_of_type t))))
+       | Modulo ->
+           let t = promote_type (get_type d1) (get_type d2) in
+           (match t with
+              IntType -> compile_binop (make_int d1) (make_int d2) (ref 0) (mod) (fun o -> IntData o)
+            | _ -> raise (Type_mismatch ("cannot compile " ^ (string_of_type t) ^ " % " ^ (string_of_type t))))
+       | Exponentiate ->
+           let t = promote_type (get_type d1) (get_type d2) in
+           (match t with
+              IntType -> compile_binop (make_float d1) (make_float d2) (ref 0.0) ( ** ) (fun o -> FloatData o)
+            | FloatType -> compile_binop (make_float d1) (make_float d2) (ref 0.0) ( ** ) (fun o -> FloatData o)
+            | _ -> raise (Type_mismatch ("cannot compile " ^ (string_of_type t) ^ " ^ " ^ (string_of_type t))))
        | _ -> raise (Not_implemented "cannot compile this type of binary expression"))
   | Member (e1, mem) -> raise (Not_implemented "cannot compile member expressions")
   | FunCall (e1, args) -> raise (Not_implemented "cannot compile function calls")

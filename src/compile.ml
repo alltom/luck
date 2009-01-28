@@ -263,9 +263,11 @@ let rec compile_expr cntxt expr =
       let t1 = get_type d1 in
       let t2 = get_type d2 in
       let t = promote_type t1 t2 in
-      let compile_binop (i1', l) (i2', r) v dataf f =
-        let out = ref (ref v) in
-        (i1 @ i2 @ i1' @ i2' @ [Op(fun () -> out := ref (f !(!l) !(!r)))], dataf out)
+      let assignment left right out = [Op(fun () -> !right := !(!left); out := !right)] in
+      let binop f left right out = [Op(fun () -> out := ref (f !(!left) !(!right)))] in
+      let compile_binop (i1', l) (i2', r) initval dataf op =
+        let out = ref (ref initval) in
+        (i1 @ i2 @ i1' @ i2' @ (op l r out), dataf out)
       in
       let ints = compile_binop (make_int d1) (make_int d2) 0 (fun o -> IntData o) in
       let floats = compile_binop (make_float d1) (make_float d2) 0.0 (fun o -> FloatData o) in
@@ -274,58 +276,66 @@ let rec compile_expr cntxt expr =
       let fail op = raise (Type_mismatch ("cannot compile " ^ (string_of_type t1) ^ " " ^ op ^ " " ^ (string_of_type t2))) in
       (match op with
          Plus -> (match t with
-                    IntType -> ints (+)
-                  | FloatType -> floats (+.)
-                  | StringType -> strings (^)
+                    IntType -> ints (binop (+))
+                  | FloatType -> floats (binop (+.))
+                  | StringType -> strings (binop (^))
                   | _ -> fail "+")
        | Minus -> (match t with
-                     IntType -> ints (-)
-                   | FloatType -> floats (-.)
+                     IntType -> ints (binop (-))
+                   | FloatType -> floats (binop (-.))
                    | _ -> fail "-")
        | Multiply -> (match t with
-                        IntType -> ints ( * )
-                      | FloatType -> floats ( *. )
+                        IntType -> ints (binop ( * ))
+                      | FloatType -> floats (binop ( *. ))
                       | _ -> fail "*")
        | Divide -> (match t with
-                      IntType -> ints (/)
-                    | FloatType -> floats (/.)
+                      IntType -> ints (binop (/))
+                    | FloatType -> floats (binop (/.))
                     | _ -> fail "/")
-       | Modulo -> (match t with IntType -> ints (mod) | _ -> fail "%")
-       | Exponentiate -> (match t with IntType | FloatType -> floats ( ** ) | _ -> fail "^")
-       | BinaryOr -> bools (||)
-       | BinaryAnd -> bools (&&)
+       | Modulo -> (match t with IntType -> ints (binop (mod)) | _ -> fail "%")
+       | Exponentiate -> (match t with IntType | FloatType -> floats (binop ( ** )) | _ -> fail "^")
+       | BinaryOr -> bools (binop (||))
+       | BinaryAnd -> bools (binop (&&))
        | LessThan ->
            (match t with
-              IntType -> compile_binop (make_int d1) (make_int d2) false (fun o -> BoolData o) (<)
-            | FloatType -> compile_binop (make_float d1) (make_float d2) false (fun o -> BoolData o) (<)
+              IntType -> compile_binop (make_int d1) (make_int d2) false (fun o -> BoolData o) (binop (<))
+            | FloatType -> compile_binop (make_float d1) (make_float d2) false (fun o -> BoolData o) (binop (<))
             | _ -> fail "<")
        | LessThanOrEqualTo ->
            (match t with
-              IntType -> compile_binop (make_int d1) (make_int d2) false (fun o -> BoolData o) (<)
-            | FloatType -> compile_binop (make_float d1) (make_float d2) false (fun o -> BoolData o) (<)
+              IntType -> compile_binop (make_int d1) (make_int d2) false (fun o -> BoolData o) (binop (<))
+            | FloatType -> compile_binop (make_float d1) (make_float d2) false (fun o -> BoolData o) (binop (<))
             | _ -> fail "<=")
        | GreaterThan ->
            (match t with
-              IntType -> compile_binop (make_int d1) (make_int d2) false (fun o -> BoolData o) (>)
-            | FloatType -> compile_binop (make_float d1) (make_float d2) false (fun o -> BoolData o) (>)
+              IntType -> compile_binop (make_int d1) (make_int d2) false (fun o -> BoolData o) (binop (>))
+            | FloatType -> compile_binop (make_float d1) (make_float d2) false (fun o -> BoolData o) (binop (>))
             | _ -> fail "<")
        | GreaterThanOrEqualTo ->
            (match t with
-              IntType -> compile_binop (make_int d1) (make_int d2) false (fun o -> BoolData o) (>=)
-            | FloatType -> compile_binop (make_float d1) (make_float d2) false (fun o -> BoolData o) (>=)
+              IntType -> compile_binop (make_int d1) (make_int d2) false (fun o -> BoolData o) (binop (>=))
+            | FloatType -> compile_binop (make_float d1) (make_float d2) false (fun o -> BoolData o) (binop (>=))
             | _ -> fail "<=")
        | Equals ->
            (match t with
-              IntType -> compile_binop (make_int d1) (make_int d2) false (fun o -> BoolData o) (=)
-            | FloatType -> compile_binop (make_float d1) (make_float d2) false (fun o -> BoolData o) (=)
-            | StringType -> compile_binop (make_string d1) (make_string d2) false (fun o -> BoolData o) (=)
+              IntType -> compile_binop (make_int d1) (make_int d2) false (fun o -> BoolData o) (binop (=))
+            | FloatType -> compile_binop (make_float d1) (make_float d2) false (fun o -> BoolData o) (binop (=))
+            | StringType -> compile_binop (make_string d1) (make_string d2) false (fun o -> BoolData o) (binop (=))
             | _ -> fail "=")
        | NotEquals ->
            (match t with
-              IntType -> compile_binop (make_int d1) (make_int d2) false (fun o -> BoolData o) (<>)
-            | FloatType -> compile_binop (make_float d1) (make_float d2) false (fun o -> BoolData o) (<>)
-            | StringType -> compile_binop (make_string d1) (make_string d2) false (fun o -> BoolData o) (<>)
+              IntType -> compile_binop (make_int d1) (make_int d2) false (fun o -> BoolData o) (binop (<>))
+            | FloatType -> compile_binop (make_float d1) (make_float d2) false (fun o -> BoolData o) (binop (<>))
+            | StringType -> compile_binop (make_string d1) (make_string d2) false (fun o -> BoolData o) (binop (<>))
             | _ -> fail "!=")
+       | Chuck ->
+           (match t2 with
+              ArrayType t' -> raise (Not_implemented "can't chuck to arrays")
+            | RefType t' -> raise (Not_implemented "can't chuck to references")
+            | IntType -> compile_binop (make_int d1) (make_int d2) 0 (fun o -> IntData o) assignment
+            | FloatType -> compile_binop (make_float d1) (make_float d2) 0.0 (fun o -> FloatData o) assignment
+            | BoolType -> compile_binop (make_bool d1) (make_bool d2) false (fun o -> BoolData o) assignment
+            | StringType -> compile_binop (make_string d1) (make_string d2) "" (fun o -> StringData o) assignment)
        | _ -> raise (Not_implemented "cannot compile this type of binary expression"))
   | Member (e1, mem) -> raise (Not_implemented "cannot compile member expressions")
   | FunCall (e1, args) -> raise (Not_implemented "cannot compile function calls")

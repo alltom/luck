@@ -252,46 +252,52 @@ let rec compile_expr cntxt expr =
   | BinaryExpr (op, e1, e2) ->
       let (i1, d1) = compile_expr cntxt e1 in
       let (i2, d2) = compile_expr cntxt e2 in
-      let compile_binop (i1', l) (i2', r) out f dataf =
+      let t1 = get_type d1 in
+      let t2 = get_type d2 in
+      let compile_binop (i1', l) (i2', r) out dataf f =
         (i1 @ i2 @ i1' @ i2' @ [Op(fun () -> out := f !l !r)], dataf out)
       in
+      let ints = compile_binop (make_int d1) (make_int d2) (ref 0) (fun o -> IntData o) in
+      let floats = compile_binop (make_float d1) (make_float d2) (ref 0.0) (fun o -> FloatData o) in
+      let strings = compile_binop (make_string d1) (make_string d2) (ref "") (fun o -> StringData o) in
+      let fail op = raise (Type_mismatch ("cannot compile " ^ (string_of_type t1) ^ " " ^ op ^ " " ^ (string_of_type t2))) in
       (match op with
          Plus ->
            let t = promote_type (get_type d1) (get_type d2) in
            (match t with
-              IntType -> compile_binop (make_int d1) (make_int d2) (ref 0) (+) (fun o -> IntData o)
-            | FloatType -> compile_binop (make_float d1) (make_float d2) (ref 0.0) (+.) (fun o -> FloatData o)
-            | StringType -> compile_binop (make_string d1) (make_string d2) (ref "") (^) (fun o -> StringData o)
-            | _ -> raise (Type_mismatch ("cannot compile " ^ (string_of_type t) ^ " + " ^ (string_of_type t))))
+              IntType -> ints (+)
+            | FloatType -> floats (+.)
+            | StringType -> strings (^)
+            | _ -> fail "+")
        | Minus ->
            let t = promote_type (get_type d1) (get_type d2) in
            (match t with
-              IntType -> compile_binop (make_int d1) (make_int d2) (ref 0) (-) (fun o -> IntData o)
-            | FloatType -> compile_binop (make_float d1) (make_float d2) (ref 0.0) (-.) (fun o -> FloatData o)
-            | _ -> raise (Type_mismatch ("cannot compile " ^ (string_of_type t) ^ " + " ^ (string_of_type t))))
+              IntType -> ints (-)
+            | FloatType -> floats (-.)
+            | _ -> fail "-")
        | Multiply ->
            let t = promote_type (get_type d1) (get_type d2) in
            (match t with
-              IntType -> compile_binop (make_int d1) (make_int d2) (ref 0) ( * ) (fun o -> IntData o)
-            | FloatType -> compile_binop (make_float d1) (make_float d2) (ref 0.0) ( *. ) (fun o -> FloatData o)
-            | _ -> raise (Type_mismatch ("cannot compile " ^ (string_of_type t) ^ " * " ^ (string_of_type t))))
+              IntType -> ints ( * )
+            | FloatType -> floats ( *. )
+            | _ -> fail "*")
        | Divide ->
            let t = promote_type (get_type d1) (get_type d2) in
            (match t with
-              IntType -> compile_binop (make_int d1) (make_int d2) (ref 0) (/) (fun o -> IntData o)
-            | FloatType -> compile_binop (make_float d1) (make_float d2) (ref 0.0) (/.) (fun o -> FloatData o)
-            | _ -> raise (Type_mismatch ("cannot compile " ^ (string_of_type t) ^ " / " ^ (string_of_type t))))
+              IntType -> ints (/)
+            | FloatType -> floats (/.)
+            | _ -> fail "/")
        | Modulo ->
            let t = promote_type (get_type d1) (get_type d2) in
            (match t with
-              IntType -> compile_binop (make_int d1) (make_int d2) (ref 0) (mod) (fun o -> IntData o)
-            | _ -> raise (Type_mismatch ("cannot compile " ^ (string_of_type t) ^ " % " ^ (string_of_type t))))
+              IntType -> ints (mod)
+            | _ -> fail "%")
        | Exponentiate ->
            let t = promote_type (get_type d1) (get_type d2) in
            (match t with
-              IntType -> compile_binop (make_float d1) (make_float d2) (ref 0.0) ( ** ) (fun o -> FloatData o)
-            | FloatType -> compile_binop (make_float d1) (make_float d2) (ref 0.0) ( ** ) (fun o -> FloatData o)
-            | _ -> raise (Type_mismatch ("cannot compile " ^ (string_of_type t) ^ " ^ " ^ (string_of_type t))))
+              IntType -> floats ( ** )
+            | FloatType -> floats ( ** )
+            | _ -> fail "^")
        | _ -> raise (Not_implemented "cannot compile this type of binary expression"))
   | Member (e1, mem) -> raise (Not_implemented "cannot compile member expressions")
   | FunCall (e1, args) -> raise (Not_implemented "cannot compile function calls")

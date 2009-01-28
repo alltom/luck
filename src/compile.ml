@@ -151,7 +151,7 @@ let rec extract_expr_cntxt expr =
    "<<< 4 => int a >>>" but not from "for(0 => int a;;);". A copy of the statement
    with used declarations removed is also returned. For example: "<<< 4 => int a >>>"
    becomes "<<< 4 => a >>>". *)
-let rec extract_stmt_cntxt local_cntxt stmt =
+let rec extract_stmt_cntxt stmt =
   match stmt with
     ExprStatement e -> let (c, e', i) = extract_expr_cntxt e in (c, ExprStatement e', i)
   | Print args ->
@@ -344,9 +344,8 @@ let print_data args () =
   | _ -> String.concat " " (List.map (fun d -> let (v, _) = pair_of_data d in v) args))
 
 let compile_stmt parent_cntxt local_cntxt stmt =
-  let (subcntxt, stmt', init_instrs) = extract_stmt_cntxt local_cntxt stmt in
-  let cntxt = combine_cntxts true parent_cntxt subcntxt in
-  ignore(cntxt);
+  let (subcntxt, stmt', init_instrs) = extract_stmt_cntxt stmt in
+  let cntxt = combine_cntxts true parent_cntxt (combine_cntxts false local_cntxt subcntxt) in
   let instrs =
     match stmt' with
       NullStatement -> []

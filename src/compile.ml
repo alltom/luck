@@ -263,8 +263,9 @@ let rec compile_expr cntxt expr =
       let t1 = get_type d1 in
       let t2 = get_type d2 in
       let t = promote_type t1 t2 in
-      let assignment left right out = [Op(fun () -> !right := !(!left); out := !right)] in
       let binop f left right out = [Op(fun () -> out := ref (f !(!left) !(!right)))] in
+      let assignment left right out = [Op(fun () -> !right := !(!left); out := !right)] in
+      let increment f left right out = [Op(fun () -> !right := f !(!right) !(!left); out := !right)] in
       let compile_binop (i1', l) (i2', r) initval dataf op =
         let out = ref (ref initval) in
         (i1 @ i2 @ i1' @ i2' @ (op l r out), dataf out)
@@ -336,6 +337,14 @@ let rec compile_expr cntxt expr =
             | FloatType -> compile_binop (make_float d1) (make_float d2) 0.0 (fun o -> FloatData o) assignment
             | BoolType -> compile_binop (make_bool d1) (make_bool d2) false (fun o -> BoolData o) assignment
             | StringType -> compile_binop (make_string d1) (make_string d2) "" (fun o -> StringData o) assignment)
+       | Pluschuck -> (* TODO: you can ChucK to anything, even like "10 +=> 20" *)
+           (match t2 with
+              ArrayType t' -> raise (Not_implemented "can't +=> arrays")
+            | RefType t' -> raise (Not_implemented "can't +=> references")
+            | IntType -> compile_binop (make_int d1) (make_int d2) 0 (fun o -> IntData o) (increment (+))
+            | FloatType -> compile_binop (make_float d1) (make_float d2) 0.0 (fun o -> FloatData o) (increment (+.))
+            | BoolType -> raise (Not_implemented "can't +=> booleans")
+            | StringType -> compile_binop (make_string d1) (make_string d2) "" (fun o -> StringData o) (increment (^)))
        | _ -> raise (Not_implemented "cannot compile this type of binary expression"))
   | Member (e1, mem) -> raise (Not_implemented "cannot compile member expressions")
   | FunCall (e1, args) -> raise (Not_implemented "cannot compile function calls")

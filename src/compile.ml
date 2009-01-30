@@ -387,8 +387,7 @@ let compile_stmt parent_cntxt local_cntxt stmt =
   in
   (subcntxt, init_instrs @ instrs)
 
-let compile (AST(fns, classes, stmts)) =
-  let parent_cntxt = Context.empty in (* TODO: should be context containing fns and classes *)
+let rec compile_stmts parent_cntxt stmts =
   let local_cntxt = ref Context.empty in
   let compile_stmt instrs stmt =
     let (cntxt', instrs') = compile_stmt parent_cntxt !local_cntxt stmt in
@@ -396,3 +395,7 @@ let compile (AST(fns, classes, stmts)) =
     instrs @ instrs'
   in
   List.fold_left compile_stmt [] stmts
+
+let compile (AST(fns, classes, stmts)) =
+  let parent_cntxt = Context.empty in (* TODO: should be context containing fns and classes *)
+  compile_stmts parent_cntxt stmts

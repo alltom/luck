@@ -37,5 +37,7 @@
            <<< things + 1 >>>;
            <<< "a string!" >>>;
            <<< "LucK can do " + things + " things!" >>>;
+           if(things > 1)
+             <<< things, "things?", "That's impressive!" >>>;
            <<< "LucK can do", things, "things!" >>>;
            <<< "LucK is basically a calculator" >>>;

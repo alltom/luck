@@ -1,16 +1,18 @@
 
 open Compile
 
-let run_instr stack instr =
-  match instr with
-    Op f -> f (); stack
-  | Branch (cond, iftrue, iffalse) -> if !(!cond) then iftrue :: stack else iffalse :: stack
-
 let rec run instrs =
   let rec real_run stack =
     match stack with
       [] -> ()
-    | [] :: stack -> real_run stack
-    | (hd :: tl) :: stack -> real_run (run_instr (tl :: stack) hd)
+    | [] :: stack' -> real_run stack'
+    | (instr :: instrs) :: stack' ->
+        (match instr with
+           Op f -> f (); real_run (instrs :: stack')
+         | Branch (cond, iftrue, iffalse) ->
+             if !(!cond) then
+               real_run ((iftrue @ instrs) :: stack')
+             else
+               real_run ((iffalse @ instrs) :: stack'))
   in
   real_run [instrs]

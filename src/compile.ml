@@ -22,6 +22,7 @@ type data =
 
 type instruction =
   Op of (unit -> unit)
+| Branch of bool ref ref * instruction list * instruction list
 
 module Context = Map.Make(String)
 
@@ -371,7 +372,7 @@ let print_data args =
     (v, t) :: [] -> fun () -> print_endline ((v ()) ^ " :(" ^ t ^ ")")
   | _ -> fun () -> print_endline (String.concat " " (List.map (fun (v, _) -> v ()) pairs))
 
-let compile_stmt parent_cntxt local_cntxt stmt =
+let rec compile_stmt parent_cntxt local_cntxt stmt =
   let (subcntxt, stmt', init_instrs) = extract_stmt_cntxt stmt in
   let cntxt = combine_cntxts true parent_cntxt (combine_cntxts false local_cntxt subcntxt) in
   let instrs =
@@ -383,11 +384,20 @@ let compile_stmt parent_cntxt local_cntxt stmt =
         let instrs = List.fold_left (fun i (i', _) -> i @ i') [] compiled_exprs in
         let args' = List.map (fun (_, d) -> d) compiled_exprs in
         instrs @ [Op(print_data args')]
+    | If (condexpr, then_stmts, else_stmts) ->
+        let (cond_cntxt, condexpr', pre_cond_instrs) = extract_expr_cntxt condexpr in
+        let (cond_instrs, cond_precast_out) = compile_expr cntxt condexpr' in
+        let (cond_cast_instrs, cond_out) = make_bool cond_precast_out in
+        let body_cntxt = combine_cntxts true cntxt cond_cntxt in
+        pre_cond_instrs (* build context for condition expression *)
+          @ cond_instrs (* evaluate the condition expression *)
+          @ cond_cast_instrs (* cast the result to a bool if needed *)
+          @ [Branch(cond_out, compile_stmts body_cntxt then_stmts, compile_stmts body_cntxt else_stmts)]
     | _ -> raise (Not_implemented "cannot compile this type of statement")
   in
   (subcntxt, init_instrs @ instrs)
-
-let rec compile_stmts parent_cntxt stmts =
+and
+compile_stmts parent_cntxt stmts =
   let local_cntxt = ref Context.empty in
   let compile_stmt instrs stmt =
     let (cntxt', instrs') = compile_stmt parent_cntxt !local_cntxt stmt in

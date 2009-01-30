@@ -8,10 +8,10 @@ type typ =
 | RefType of typ
 | IntType | FloatType | BoolType | StringType
 
-(* boxes! used during compilation (and in easy-to-please statements
-   like <<< >>>) to keep OCaml's type checker happy. Each of these are
-   (ref ref) so that the same instructions can be executed multiple
-   times, each instance creating its own inner reference. *)
+(* boxes! used during compilation to tag the results of expressions with
+   their types. Each of these are (ref ref) so that the same instructions
+   can be executed multiple times, each instance creating its own inner
+   reference. *)
 type data =
   ArrayData of data array ref ref
 | RefData of data ref ref

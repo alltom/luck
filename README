@@ -32,12 +32,11 @@
           (probably this one)
 
        [[things that work]]
-           2 => int things;
-           <<< things >>>;
-           <<< things + 1 >>>;
-           <<< "a string!" >>>;
-           <<< "LucK can do " + things + " things!" >>>;
-           if(things > 1)
-             <<< things, "things?", "That's impressive!" >>>;
-           <<< "LucK can do", things, "things!" >>>;
-           <<< "LucK is basically a calculator" >>>;
+           0 => int a;
+           while(a < 10) {
+             if(a % 2 == 0)
+               <<< a, "is even" >>>;
+             else
+               <<< a + " is odd" >>>;
+             1 +=> a;
+           }

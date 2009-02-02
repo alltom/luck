@@ -22,7 +22,8 @@ type data =
 
 type instruction =
   Op of (unit -> unit)
-| Branch of bool ref ref * instruction list * instruction list
+| Branch of bool ref ref * instruction list ref * instruction list ref
+| Loop of bool ref ref * instruction list ref
 
 module Context = Map.Make(String)
 
@@ -392,7 +393,16 @@ let rec compile_stmt parent_cntxt local_cntxt stmt =
         pre_cond_instrs (* build context for condition expression *)
           @ cond_instrs (* evaluate the condition expression *)
           @ cond_cast_instrs (* cast the result to a bool if needed *)
-          @ [Branch(cond_out, compile_stmts body_cntxt then_stmts, compile_stmts body_cntxt else_stmts)]
+          @ [Branch(cond_out, ref (compile_stmts body_cntxt then_stmts), ref (compile_stmts body_cntxt else_stmts))]
+    | While (condexpr, stmts) ->
+        let (cond_cntxt, condexpr', pre_cond_instrs) = extract_expr_cntxt condexpr in
+        let (cond_instrs, cond_precast_out) = compile_expr cntxt condexpr' in
+        let (cond_cast_instrs, cond_out) = make_bool cond_precast_out in
+        let body_cntxt = combine_cntxts true cntxt cond_cntxt in
+        pre_cond_instrs
+          @ cond_instrs
+          @ cond_cast_instrs
+          @ [Loop(cond_out, ref ((compile_stmts body_cntxt stmts) @ cond_instrs @ cond_cast_instrs))]
     | _ -> raise (Not_implemented "cannot compile this type of statement")
   in
   (subcntxt, init_instrs @ instrs)

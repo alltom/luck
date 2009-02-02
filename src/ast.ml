@@ -53,6 +53,7 @@ type
   | ExprStatement of expr
   | ValuedReturn of expr
   | Return
+  | Break
   | Print of expr list
   | While of expr * stmt list
   | Do of stmt list * expr
@@ -102,6 +103,7 @@ let rec string_of_stmt stmt =
   | ExprStatement e -> (string_of_expr e) ^ ";"
   | ValuedReturn e -> "return " ^ (string_of_expr e) ^ ";"
   | Return -> "return;"
+  | Break -> "break;"
   | Print args -> "<<< " ^ (String.concat ", " (List.map string_of_expr args)) ^ " >>>;"
   | While (e, stmts) -> "while(.){.}"
   | Do (stmts, e) -> "do{.}while(.);"

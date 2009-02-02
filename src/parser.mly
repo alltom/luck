@@ -25,7 +25,7 @@ let rec commas_to_list e =
 %token LPAREN RPAREN LBRACE RBRACE LBRACK RBRACK EQ NEQ
 %token AMPAMP PIPEPIPE
 %token COMMA AT
-%token WHILE UNTIL REPEAT DO IF ELSE FOR FUN RETURN PUBLIC STATIC CLASS EXTENDS
+%token WHILE UNTIL REPEAT DO IF ELSE FOR FUN RETURN BREAK PUBLIC STATIC CLASS EXTENDS
 %token <float> FLOAT
 %token <int> INT
 %token <bool> BOOL
@@ -91,6 +91,7 @@ statement:
 | exp SEMICOLON { ExprStatement($1) }
 | RETURN SEMICOLON { Return }
 | RETURN exp SEMICOLON { ValuedReturn($2) }
+| BREAK SEMICOLON { Break }
 | LARROWS exp RARROWS SEMICOLON { Print(commas_to_list $2) }
 | WHILE LPAREN exp RPAREN blockornot { While($3, $5) }
 | DO block WHILE LPAREN exp RPAREN SEMICOLON { Do($2, $5) }

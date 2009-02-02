@@ -22,6 +22,7 @@ rule token = parse
 | "false"                  { BOOL(false) }
 | ';'                      { SEMICOLON }
 | "return"                 { RETURN }
+| "break"                 { BREAK }
 | "fun"                    { FUN }
 | "public"                 { PUBLIC }
 | "static"                 { STATIC }

@@ -24,6 +24,7 @@ type instruction =
   Op of (unit -> unit)
 | Branch of bool ref ref * instruction list * instruction list
 | Loop of bool ref ref * instruction list
+| Break
 
 module Context = Map.Make(String)
 
@@ -403,6 +404,7 @@ let rec compile_stmt parent_cntxt local_cntxt stmt =
           @ cond_instrs
           @ cond_cast_instrs
           @ [Loop(cond_out, (compile_stmts body_cntxt stmts) @ cond_instrs @ cond_cast_instrs)]
+    | Ast.Break -> [Break]
     | _ -> raise (Not_implemented "cannot compile this type of statement")
   in
   (subcntxt, init_instrs @ instrs)

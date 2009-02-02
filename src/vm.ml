@@ -1,7 +1,7 @@
 
 open Compile
 
-type frame = Bland | LoopFrame
+type frame = TopLevel | LoopFrame
 
 let rec run instrs =
   let rec real_run stack =
@@ -20,6 +20,7 @@ let rec run instrs =
              if !(!cond) then
                real_run ((t, (body @ instrs @ [Loop(cond, body)])) :: stack')
              else
-               real_run ((t, instrs) :: stack'))
+               real_run ((t, instrs) :: stack')
+         | Break -> real_run stack')
   in
-  real_run [(Bland, instrs)]
+  real_run [(TopLevel, instrs)]

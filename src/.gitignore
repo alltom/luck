@@ -9,3 +9,5 @@ parser.output
 luck
 parser_test
 compile_test
+*.o
+*.opt

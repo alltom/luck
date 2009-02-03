@@ -42,6 +42,6 @@ test: $(TESTS)
 
 .PHONY: clean
 clean:
-   rm -f *.omc *.cm? *.run \
+   rm -f *.omc *.cm? *.run *.o *.opt \
    lexer.ml parser.ml parser.mli parser.output \
    luck parser_test

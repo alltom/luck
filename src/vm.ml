@@ -1,5 +1,9 @@
 
-open Compile
+type instruction =
+  Op of (unit -> unit)
+| Branch of bool ref ref * instruction list * instruction list
+| Loop of bool ref ref * instruction list
+| Break
 
 type frame = TopLevel | LoopFrame of bool ref ref * instruction list
 

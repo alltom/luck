@@ -1,5 +1,6 @@
 
 open Ast
+open Vm
 
 exception Compile_error
 
@@ -19,12 +20,6 @@ type data =
 | BoolData of bool ref ref
 | FloatData of float ref ref
 | StringData of string ref ref
-
-type instruction =
-  Op of (unit -> unit)
-| Branch of bool ref ref * instruction list * instruction list
-| Loop of bool ref ref * instruction list
-| Break
 
 module Context = Map.Make(String)
 

@@ -11,6 +11,7 @@
 }
 
 let digit = ['0'-'9']
+let hexdigit = ['0'-'9' 'a'-'f' 'A'-'F']
 let ident = ['a'-'z' 'A'-'Z'] ['a'-'z' 'A'-'Z' '0'-'9' '_']*
 rule token = parse
   [' ' '\t']               { token lexbuf }
@@ -37,7 +38,7 @@ rule token = parse
 | "for"                    { FOR }
 | "." digit+
 | digit+ "." digit* as num { FLOAT (float_of_string num) }
-| "0x" digit+ as num       { INT (int_of_string num) }
+| "0x" hexdigit+ as num       { INT (int_of_string num) }
 | digit+ as num            { INT (int_of_string num) }
 | ident as name            { ID(name) }
 | "-=>"                    { MINUSCHUCK }

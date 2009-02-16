@@ -10,7 +10,7 @@ let parse_error s =
     s
 
 (* converts an expression with commas at top level to a list of the
-   sub-expressions *)
+   sub-expressions ("a, b, c" becomes [a, b, c]) *)
 let rec commas_to_list e =
   match e with
     Comma exps -> exps

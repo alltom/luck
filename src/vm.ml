@@ -9,6 +9,7 @@ type data =
 
 and instruction =
   IPush of data
+| IInit of string * data
 | IPushVar of string
 | IAssign of string
 | IPrint of int (* number of things to print *)
@@ -31,6 +32,7 @@ let string_of_data = function
 
 let string_of_instruction = function
   IPush d -> "push value " ^ (string_of_data d)
+| IInit (v, d) -> "init " ^ v ^ " = " ^ (string_of_data d)
 | IPushVar v -> "push var " ^ v
 | IAssign s -> "assign " ^ s
 | IPrint i -> "print " ^ (string_of_int i)
@@ -59,11 +61,13 @@ let rec lookup envs var =
   | [] :: envs' -> lookup envs' var
   | [] -> error ("variable " ^ var ^ " does not exist")
 
+let env_insert var v env = (var, ref v) :: env
 let assign envs var v = (lookup envs var) := v
 
 let exec instr frms stck envs =
   match instr with
     IPush d -> (frms, d :: stck, envs)
+  | IInit (v, d) -> (match envs with env::rest -> (frms, stck, (env_insert v d env) :: rest) | [] -> error "weird environment")
   | IPushVar var -> (frms, !(lookup envs var) :: stck, envs)
   | IAssign var -> let (v, stck) = pop stck in assign envs var v; (frms, stck, envs)
   | IPrint count -> (frms, (print count stck), envs)

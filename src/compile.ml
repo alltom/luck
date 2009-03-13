@@ -33,11 +33,11 @@ let strings_of_cntxt cntxt =
    and the instructions to finish initialization (ex: for objects or
    and arrays). ALL arrays (even those defined like "int a[10]") have size 0.
    before the initialization statements are executed. *)
-let rec instantiate_type asttype =
+let rec instantiate var asttype =
   match asttype with
-    Type("int", false, _, []) -> (IntType, IntData 0, [])
-  | Type("float", false, _, []) -> (FloatType, FloatData 0.0, [])
-  | Type("string", false, _, []) -> (StringType, StringData "", [])
+    Type("int", false, _, []) -> (IntType, [IInit (var, IntData 0)])
+  | Type("float", false, _, []) -> (FloatType, [IInit (var, FloatData 0.0)])
+  | Type("string", false, _, []) -> (StringType, [IInit (var, StringData "")])
   | _ -> raise (Not_implemented "cannot instantiate this type")
 
 (* returns a context, and its initialization code *)
@@ -45,8 +45,8 @@ let rec build_context decls =
   let rec loop cntxt instrs decls =
     match decls with
       (name, t) :: rest ->
-        let (t', d, i) = instantiate_type t in
-        loop (Context.add name (t', d) cntxt) i rest
+        let (t', i) = instantiate name t in
+        loop (Context.add name t' cntxt) i rest
     | [] -> (cntxt, instrs)
   in loop Context.empty [] decls
 

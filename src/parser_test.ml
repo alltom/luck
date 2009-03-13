@@ -53,11 +53,11 @@ let _ =
   t "if(a) b; else{c;d;}" [] [] [If(a, [es b], [es c; es d])];
   t "if(a){b;}else c;" [] [] [If(a, [es b], [es c])];
   t "if(a){b;c;}else d;" [] [] [If(a, [es b; es c], [es d])];
-  t "for(;;);" [] [] [For(NullExpression, NullExpression, NullExpression, [NullStatement])];
-  t "for(a;;);" [] [] [For(a, NullExpression, NullExpression, [NullStatement])];
-  t "for(;a;);" [] [] [For(NullExpression, a, NullExpression, [NullStatement])];
-  t "for(;;a);" [] [] [For(NullExpression, NullExpression, a, [NullStatement])];
-  t "for(;;) a;" [] [] [For(NullExpression, NullExpression, NullExpression, [es a])];
+  t "for(;;);" [] [] [For(Bool true, Bool true, Bool true, [NullStatement])];
+  t "for(a;;);" [] [] [For(a, Bool true, Bool true, [NullStatement])];
+  t "for(;a;);" [] [] [For(Bool true, a, Bool true, [NullStatement])];
+  t "for(;;a);" [] [] [For(Bool true, Bool true, a, [NullStatement])];
+  t "for(;;) a;" [] [] [For(Bool true, Bool true, Bool true, [es a])];
   t "for(a;b;c) d;" [] [] [For(a, b, c, [es d])];
   t "for(a;b;c){d;}" [] [] [For(a, b, c, [es d])];
   t "for(a;b;c){d;e;}" [] [] [For(a, b, c, [es d; es e])];

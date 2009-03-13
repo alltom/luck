@@ -13,6 +13,7 @@ and instruction =
 | IInit of string * data
 | IPushVar of string
 | IAssign of string (* puts top stack value in variable with given name; leaves value on stack *)
+| IBranch of frame * frame
 | IPrint of int (* number of things to print (consumes) *)
 
 and frame = instruction list
@@ -31,23 +32,30 @@ let string_of_data = function
 | FloatData f -> string_of_float f
 | StringData s -> s
 
-let string_of_instruction = function
+let rec string_of_instruction = function
   IPush d -> "push value " ^ (string_of_data d)
 | IDiscard -> "discard"
 | IInit (v, d) -> "init " ^ v ^ " = " ^ (string_of_data d)
 | IPushVar v -> "push var " ^ v
 | IAssign s -> "assign " ^ s
+| IBranch (f1, f2) -> "if (" ^ (String.concat "; " (List.map string_of_instruction f1)) ^ ") (" ^ (String.concat "; " (List.map string_of_instruction f2)) ^ ")"
 | IPrint i -> "print " ^ (string_of_int i)
   
 let error msg =
   raise (Machine_error msg)
 
+let rec nfold f memo n =
+  if n > 0 then nfold f (f memo) (n-1) else memo
+
 let pop = function
   d :: stck -> (d, stck)
 | _ -> error "stack underflow"
 
-let rec nfold f memo n =
-  if n > 0 then nfold f (f memo) (n-1) else memo
+let pop_bool stck =
+  let (v, stck) = pop stck in
+  match v with
+    BoolData b -> (b, stck)
+  | _ -> error "invalid stack; expected bool"
 
 let npop n stck =
   nfold (fun (popped, stck) -> let (d, stck') = pop stck in (d :: popped, stck')) ([], stck) n
@@ -73,6 +81,9 @@ let exec instr frms stck envs =
   | IInit (v, d) -> (match envs with env::rest -> (frms, stck, (env_insert v d env) :: rest) | [] -> error "weird environment")
   | IPushVar var -> (frms, !(lookup envs var) :: stck, envs)
   | IAssign var -> let (v, stck) = pop stck in assign envs var v; (frms, v :: stck, envs)
+  | IBranch (f1, f2) ->
+      let (cond, stck) = pop_bool stck in
+      ((if cond then f1 else f2) :: frms, stck, envs)
   | IPrint count -> (frms, (print count stck), envs)
 
 let run frm env =

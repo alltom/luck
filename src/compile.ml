@@ -179,18 +179,20 @@ let rec compile_expr cntxt expr =
   | FunCall (e1, args) -> raise (Not_implemented "cannot compile function calls")
   | Cast (e1, t) -> raise (Not_implemented "cannot compile casts")
   | Spork e1 -> raise (Not_implemented "cannot compile sporks")
-  | Trinary (e1, e2, e3) -> raise (Not_implemented "cannot compile trinary conditionals")
+  | Trinary (e1, e2, e3) -> (compile_expr cntxt e1) @ [IBranch (compile_expr cntxt e2, compile_expr cntxt e3)]
   | Subscript (e1, e2) -> raise (Not_implemented "cannot compile subscription")
   | Time (e1, e2) -> raise (Not_implemented "cannot compile time expressions")
   | Declaration decls -> raise (Compiler_error "declaration wasn't extracted earlier")
 
 let rec compile_stmt parent_cntxt local_cntxt stmt =
   let (subcntxt, stmt', init_instrs) = extract_stmt_cntxt stmt in
-  let cntxt = combine_cntxts true parent_cntxt (combine_cntxts false local_cntxt subcntxt) in
+  let this_context = combine_cntxts false local_cntxt subcntxt in
+  let cntxt = combine_cntxts true parent_cntxt this_context in
   let instrs =
     match stmt' with
       NullStatement -> []
     | ExprStatement e -> (compile_expr cntxt e) @ [IDiscard]
+    | If (e, s1, s2) -> (compile_expr cntxt e) @ [IBranch (compile_stmts cntxt s1, compile_stmts cntxt s2)]
     | Print args ->
         let instrs = List.fold_left (fun instrs e -> instrs @ (compile_expr cntxt e)) [] args in
         instrs @ [IPrint (List.length args)]

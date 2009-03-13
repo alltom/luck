@@ -161,29 +161,36 @@ let rec get_type d =
   | FloatData _ -> FloatType
   | StringData _ -> StringType
 
-(* TODO: add type annotations *)
+(* TODO: add casts *)
 (* TODO: check variables for existence *)
+(* when an expression finishes executing, there should be one more value on the stack *)
 let rec compile_expr cntxt expr =
   match expr with
-    Int i -> [IPush (IntData i)]
-  | Float f -> [IPush (FloatData f)]
-  | Bool b -> [IPush (BoolData b)]
-  | String s -> [IPush (StringData s)]
-  | Var name -> [IPushVar name]
+    Int i -> IntType, [IPush (IntData i)]
+  | Float f -> FloatType, [IPush (FloatData f)]
+  | Bool b -> BoolType, [IPush (BoolData b)]
+  | String s -> StringType, [IPush (StringData s)]
+  | Var name -> (Context.find name cntxt), [IPushVar name]
   | Array exprs -> raise (Not_implemented "cannot compile array expressions")
-  | Comma exprs -> List.fold_left (fun instrs e -> instrs @ (compile_expr cntxt e)) [] exprs
+  | Comma exprs -> List.fold_left (fun (t, instrs) e -> let (t, i) = compile_expr cntxt e in (t, instrs @ [IDiscard] @ i)) (BoolType, [IPush (BoolData false)]) exprs (* TODO: doity *)
   | UnaryExpr (op, e1) -> raise (Not_implemented "cannot compile unary expressions")
-  | BinaryExpr (Chuck, e, Var v) -> (compile_expr cntxt e) @ [(* cast *)] @ [IAssign v]
+  | BinaryExpr (Chuck, e, Var v) -> let t, i = compile_expr cntxt e in (t, i @ [(* cast *)] @ [IAssign v])
   | BinaryExpr (op, e1, e2) -> raise (Not_implemented "cannot compile that binary expression")
   | Member (e1, mem) -> raise (Not_implemented "cannot compile member expressions")
   | FunCall (e1, args) -> raise (Not_implemented "cannot compile function calls")
   | Cast (e1, t) -> raise (Not_implemented "cannot compile casts")
   | Spork e1 -> raise (Not_implemented "cannot compile sporks")
-  | Trinary (e1, e2, e3) -> (compile_expr cntxt e1) @ [IBranch (compile_expr cntxt e2, compile_expr cntxt e3)]
+  | Trinary (cond, e1, e2) ->
+      let (tc, ic) = compile_expr cntxt cond in
+      let (t1, i1) = compile_expr cntxt e1 in
+      let (t2, i2) = compile_expr cntxt e2 in
+      (t1, ic @ [IBranch (i1, i2)])
   | Subscript (e1, e2) -> raise (Not_implemented "cannot compile subscription")
   | Time (e1, e2) -> raise (Not_implemented "cannot compile time expressions")
   | Declaration decls -> raise (Compiler_error "declaration wasn't extracted earlier")
 
+(* TODO: add if cast *)
+(* when a statement finishes executing, the stack should be how it was before *)
 let rec compile_stmt parent_cntxt local_cntxt stmt =
   let (subcntxt, stmt', init_instrs) = extract_stmt_cntxt stmt in
   let this_context = combine_cntxts false local_cntxt subcntxt in
@@ -191,10 +198,10 @@ let rec compile_stmt parent_cntxt local_cntxt stmt =
   let instrs =
     match stmt' with
       NullStatement -> []
-    | ExprStatement e -> (compile_expr cntxt e) @ [IDiscard]
-    | If (e, s1, s2) -> (compile_expr cntxt e) @ [IBranch (compile_stmts cntxt s1, compile_stmts cntxt s2)]
+    | ExprStatement e -> let (t, i) = compile_expr cntxt e in i @ [IDiscard]
+    | If (e, s1, s2) -> let (t, i) = compile_expr cntxt e in i @ [IBranch (compile_stmts cntxt s1, compile_stmts cntxt s2)]
     | Print args ->
-        let instrs = List.fold_left (fun instrs e -> instrs @ (compile_expr cntxt e)) [] args in
+        let instrs = List.fold_left (fun instrs e -> let (t, i) = compile_expr cntxt e in instrs @ i) [] args in
         instrs @ [IPrint (List.length args)]
     | _ -> raise (Not_implemented "cannot compile this type of statement")
   in

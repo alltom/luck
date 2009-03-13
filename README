@@ -32,11 +32,5 @@
           (probably this one)
 
        [[things that work]]
-           0 => int a;
-           while(a < 10) {
-             if(a % 2 == 0)
-               <<< a, "is even" >>>;
-             else
-               <<< a + " is odd" >>>;
-             1 +=> a;
-           }
+           4 => int a;
+           <<< "a =", a >>>;

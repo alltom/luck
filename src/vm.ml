@@ -13,7 +13,8 @@ and instruction =
 | IInit of string * data
 | IPushVar of string
 | IAssign of string (* puts top stack value in variable with given name; leaves value on stack *)
-| IBranch of frame * frame
+| IBranch of frame * frame (* if true body, if false body *)
+| IWhile of frame * frame (* condition, body *)
 | IPrint of int (* number of things to print (consumes) *)
 | IBoolCast
 
@@ -40,6 +41,7 @@ let rec string_of_instruction = function
 | IPushVar v -> "push var " ^ v
 | IAssign s -> "assign " ^ s
 | IBranch (f1, f2) -> "if (" ^ (String.concat "; " (List.map string_of_instruction f1)) ^ ") (" ^ (String.concat "; " (List.map string_of_instruction f2)) ^ ")"
+| IWhile (f1, f2) -> "while (" ^ (String.concat "; " (List.map string_of_instruction f1)) ^ ") { " ^ (String.concat "; " (List.map string_of_instruction f2)) ^ " }"
 | IPrint i -> "print " ^ (string_of_int i)
 | IBoolCast -> "cast to bool"
   
@@ -86,6 +88,14 @@ let exec instr frms stck envs =
   | IBranch (f1, f2) ->
       let (cond, stck) = pop_bool stck in
       ((if cond then f1 else f2) :: frms, stck, envs)
+  | IWhile (condframe, bodyframe) ->
+      let (cond, stck) = pop_bool stck in
+      if cond then
+        (match frms with
+           f1 :: rest -> ((bodyframe @ condframe) :: (instr :: f1) :: rest, stck, envs)
+         | _ -> error "weird stack: expecting a frame")
+      else
+        (frms, stck, envs)
   | IPrint count -> (frms, (print count stck), envs)
   | IBoolCast ->
       let (v, stck) = pop stck in

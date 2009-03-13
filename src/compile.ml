@@ -209,6 +209,9 @@ let rec compile_stmt parent_cntxt local_cntxt stmt =
     | If (e, s1, s2) ->
         let (t, i) = compile_expr cntxt e in
         i @ (cast t BoolType) @ [IBranch (compile_stmts cntxt s1, compile_stmts cntxt s2)]
+    | While (cond, stmts) ->
+        let (tc, ic) = compile_expr cntxt cond in
+        ic @ (cast tc BoolType) @ [IWhile (ic @ (cast tc BoolType), compile_stmts cntxt stmts)]
     | Print args ->
         let instrs = List.fold_left (fun instrs e -> let (t, i) = compile_expr cntxt e in instrs @ i) [] args in
         instrs @ [IPrint (List.length args)]

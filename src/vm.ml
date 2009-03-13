@@ -8,8 +8,8 @@ type data =
 | StringData of string
 
 and instruction =
-  Push of data
-| Print of int (* number of things to print *)
+  IPush of data
+| IPrint of int (* number of things to print *)
 
 and frame = instruction list
 
@@ -28,8 +28,8 @@ let string_of_data = function
 | StringData s -> s
 
 let string_of_instruction = function
-    Push d -> "push " ^ (string_of_data d)
-  | Print i -> "print " ^ (string_of_int i)
+    IPush d -> "push " ^ (string_of_data d)
+  | IPrint i -> "print " ^ (string_of_int i)
   
 let error msg =
   raise (Machine_error msg)
@@ -51,8 +51,8 @@ let print count stck =
 
 let exec instr frms stck envs =
   match instr with
-    Push d -> (frms, d :: stck, envs)
-  | Print count -> (frms, (print count stck), envs)
+    IPush d -> (frms, d :: stck, envs)
+  | IPrint count -> (frms, (print count stck), envs)
 
 let run frm env =
   let rec loop (frms, stck, envs) =

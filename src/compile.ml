@@ -129,9 +129,9 @@ let rec extract_expr_cntxt expr =
 let rec extract_stmt_cntxt stmt =
   match stmt with
     ExprStatement e -> let (c, e', i) = extract_expr_cntxt e in (c, ExprStatement e', i)
-  | Ast.Print args ->
+  | Print args ->
       let (c, args', i) = extract_list_cntxt args extract_expr_cntxt in
-      (c, Ast.Print args', i)
+      (c, Print args', i)
   | _ -> (Context.empty, stmt, [])
 
 (* returns the type which best covers t1 and t2 *)
@@ -163,10 +163,10 @@ let rec get_type d =
 
 let rec compile_expr cntxt expr =
   match expr with
-    Int i -> [Push (IntData i)]
-  | Float f -> [Push (FloatData f)]
-  | Bool b -> [Push (BoolData b)]
-  | String s -> [Push (StringData s)]
+    Int i -> [IPush (IntData i)]
+  | Float f -> [IPush (FloatData f)]
+  | Bool b -> [IPush (BoolData b)]
+  | String s -> [IPush (StringData s)]
   | Var name -> raise (Not_implemented "cannot compile variable expressions")
   | Array exprs -> raise (Not_implemented "cannot compile array expressions")
   | Comma exprs -> List.fold_left (fun instrs e -> instrs @ (compile_expr cntxt e)) [] exprs
@@ -188,9 +188,9 @@ let rec compile_stmt parent_cntxt local_cntxt stmt =
     match stmt' with
       NullStatement -> []
     | ExprStatement e -> compile_expr cntxt e
-    | Ast.Print args ->
+    | Print args ->
         let instrs = List.fold_left (fun instrs e -> instrs @ (compile_expr cntxt e)) [] args in
-        instrs @ [Print (List.length args)]
+        instrs @ [IPrint (List.length args)]
     | _ -> raise (Not_implemented "cannot compile this type of statement")
   in
   (subcntxt, init_instrs @ instrs)

@@ -17,6 +17,7 @@ and instruction =
 | IWhile of frame * frame (* condition, body *)
 | IPrint of int (* number of things to print (consumes) *)
 | IBoolCast
+| IAddInt
 
 and frame = instruction list
 
@@ -44,6 +45,7 @@ let rec string_of_instruction = function
 | IWhile (f1, f2) -> "while (" ^ (String.concat "; " (List.map string_of_instruction f1)) ^ ") { " ^ (String.concat "; " (List.map string_of_instruction f2)) ^ " }"
 | IPrint i -> "print " ^ (string_of_int i)
 | IBoolCast -> "cast to bool"
+| IAddInt -> "add (int)"
   
 let error msg =
   raise (Machine_error msg)
@@ -56,10 +58,14 @@ let pop = function
 | _ -> error "stack underflow"
 
 let pop_bool stck =
-  let (v, stck) = pop stck in
-  match v with
-    BoolData b -> (b, stck)
-  | _ -> error "invalid stack; expected bool"
+  match pop stck with
+    (BoolData b, stck') -> (b, stck')
+  | _ -> error "invalid stack: expected bool"
+
+let pop_int stck =
+  match pop stck with
+    (IntData i, stck') -> (i, stck')
+  | _ -> error "invalid stack: expected int"
 
 let npop n stck =
   nfold (fun (popped, stck) -> let (d, stck') = pop stck in (d :: popped, stck')) ([], stck) n
@@ -103,6 +109,10 @@ let exec instr frms stck envs =
          IntData i -> (frms, (BoolData (i != 0)) :: stck, envs)
        | BoolData b -> (frms, v :: stck, envs)
        | _ -> error "cannot convert to bool")
+  | IAddInt ->
+      let (i1, stck) = pop_int stck in
+      let (i2, stck) = pop_int stck in
+      (frms, (IntData (i1 + i2)) :: stck, envs)
 
 let run frm env =
   let rec loop (frms, stck, envs) =

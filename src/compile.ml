@@ -181,6 +181,11 @@ let rec compile_expr cntxt expr =
   | Comma exprs -> List.fold_left (fun (t, instrs) e -> let (t, i) = compile_expr cntxt e in (t, instrs @ [IDiscard] @ i)) (BoolType, [IPush (BoolData false)]) exprs (* TODO: doity *)
   | UnaryExpr (op, e1) -> raise (Not_implemented "cannot compile unary expressions")
   | BinaryExpr (Chuck, e, Var v) -> let t, i = compile_expr cntxt e in (t, i @ [(* cast *)] @ [IAssign v])
+  | BinaryExpr (Plus, e1, e2) ->
+      let (t1, i1) = compile_expr cntxt e1 in
+      let (t2, i2) = compile_expr cntxt e2 in
+      let return_type = promote_type t1 t2 in
+      (return_type, i1 @ (cast t1 return_type) @ i2 @ (cast t2 return_type) @ [IAddInt])
   | BinaryExpr (op, e1, e2) -> raise (Not_implemented "cannot compile that binary expression")
   | Member (e1, mem) -> raise (Not_implemented "cannot compile member expressions")
   | FunCall (e1, args) -> raise (Not_implemented "cannot compile function calls")

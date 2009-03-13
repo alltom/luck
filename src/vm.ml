@@ -9,6 +9,8 @@ type data =
 
 and instruction =
   IPush of data
+| IPushVar of string
+| IAssign of string
 | IPrint of int (* number of things to print *)
 
 and frame = instruction list
@@ -28,8 +30,10 @@ let string_of_data = function
 | StringData s -> s
 
 let string_of_instruction = function
-    IPush d -> "push " ^ (string_of_data d)
-  | IPrint i -> "print " ^ (string_of_int i)
+  IPush d -> "push value " ^ (string_of_data d)
+| IPushVar v -> "push var " ^ v
+| IAssign s -> "assign " ^ s
+| IPrint i -> "print " ^ (string_of_int i)
   
 let error msg =
   raise (Machine_error msg)
@@ -49,9 +53,19 @@ let print count stck =
   print_endline (String.concat " " (List.map string_of_data args));
   stck
 
+let rec lookup envs var =
+  match envs with
+    ((name, d) :: env') :: envs' -> (if name = var then d else lookup (env' :: envs') var)
+  | [] :: envs' -> lookup envs' var
+  | [] -> error ("variable " ^ var ^ " does not exist")
+
+let assign envs var v = (lookup envs var) := v
+
 let exec instr frms stck envs =
   match instr with
     IPush d -> (frms, d :: stck, envs)
+  | IPushVar var -> (frms, !(lookup envs var) :: stck, envs)
+  | IAssign var -> let (v, stck) = pop stck in assign envs var v; (frms, stck, envs)
   | IPrint count -> (frms, (print count stck), envs)
 
 let run frm env =

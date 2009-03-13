@@ -161,17 +161,20 @@ let rec get_type d =
   | FloatData _ -> FloatType
   | StringData _ -> StringType
 
+(* TODO: add type annotations *)
+(* TODO: check variables for existence *)
 let rec compile_expr cntxt expr =
   match expr with
     Int i -> [IPush (IntData i)]
   | Float f -> [IPush (FloatData f)]
   | Bool b -> [IPush (BoolData b)]
   | String s -> [IPush (StringData s)]
-  | Var name -> raise (Not_implemented "cannot compile variable expressions")
+  | Var name -> [IPushVar name]
   | Array exprs -> raise (Not_implemented "cannot compile array expressions")
   | Comma exprs -> List.fold_left (fun instrs e -> instrs @ (compile_expr cntxt e)) [] exprs
   | UnaryExpr (op, e1) -> raise (Not_implemented "cannot compile unary expressions")
-  | BinaryExpr (op, e1, e2) -> raise (Not_implemented "cannot compile binary expressions")
+  | BinaryExpr (Chuck, e, Var v) -> (compile_expr cntxt e) @ [(* cast *)] @ [IAssign v]
+  | BinaryExpr (op, e1, e2) -> raise (Not_implemented "cannot compile that binary expression")
   | Member (e1, mem) -> raise (Not_implemented "cannot compile member expressions")
   | FunCall (e1, args) -> raise (Not_implemented "cannot compile function calls")
   | Cast (e1, t) -> raise (Not_implemented "cannot compile casts")
@@ -205,5 +208,4 @@ compile_stmts parent_cntxt stmts =
   List.fold_left compile_stmt [] stmts
 
 let compile (AST(fns, classes, stmts)) =
-  let parent_cntxt = Context.empty in (* TODO: should be context containing fns and classes *)
-  compile_stmts parent_cntxt stmts
+  compile_stmts Context.empty stmts

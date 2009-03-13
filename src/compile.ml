@@ -9,18 +9,6 @@ type typ =
 | RefType of typ
 | IntType | FloatType | BoolType | StringType
 
-(* boxes! used during compilation to tag the results of expressions with
-   their types. Each of these are (ref ref) so that the same instructions
-   can be executed multiple times, each instance creating its own inner
-   reference. *)
-type data =
-  ArrayData of data array ref ref
-| RefData of data ref ref
-| IntData of int ref ref
-| BoolData of bool ref ref
-| FloatData of float ref ref
-| StringData of string ref ref
-
 module Context = Map.Make(String)
 
 exception Compiler_error of string (* something went wrong internally *)
@@ -41,30 +29,15 @@ let rec string_of_type t =
 let strings_of_cntxt cntxt =
   Context.fold (fun name (t, d) lst -> ((string_of_type t) ^ " " ^ name) :: lst) cntxt []
 
-let rec string_of_data d =
-  match d with
-    ArrayData elems -> "array"
-  | RefData d' -> "ref " ^ (string_of_data !(!d'))
-  | IntData i -> "int " ^ (string_of_int !(!i))
-  | BoolData b -> "bool " ^ (string_of_bool !(!b))
-  | FloatData f -> "float " ^ (string_of_float !(!f))
-  | StringData s -> "string \"" ^ !(!s) ^ "\""
-
-(* returns the converted data type, an initialized data storage location,
-   and the instructions to execute to finish initialization (for non-primitives
+(* returns the converted data type, a default value,
+   and the instructions to finish initialization (ex: for objects or
    and arrays). ALL arrays (even those defined like "int a[10]") have size 0.
    before the initialization statements are executed. *)
 let rec instantiate_type asttype =
   match asttype with
-    Type("int", false, _, []) -> (IntType, IntData(ref (ref 0)), [])
-  | Type("float", false, _, []) -> (FloatType, FloatData(ref (ref 0.0)), [])
-  | Type("string", false, _, []) -> (StringType, StringData(ref (ref "")), [])
-  | Type(t, true, s, a) ->
-      let (t', d, s) = instantiate_type (Type(t, false, s, a)) in
-      (RefType t', RefData(ref (ref d)), s)
-  | Type(t, false, s, h::r) ->
-      let (t', d, s) = instantiate_type (Type(t, false, s, r)) in
-      (ArrayType t', ArrayData (ref (ref (Array.make 0 d))), s) (* TODO: instructions for intitializing properly *)
+    Type("int", false, _, []) -> (IntType, IntData 0, [])
+  | Type("float", false, _, []) -> (FloatType, FloatData 0.0, [])
+  | Type("string", false, _, []) -> (StringType, StringData "", [])
   | _ -> raise (Not_implemented "cannot instantiate this type")
 
 (* returns a context, and its initialization code *)
@@ -146,7 +119,7 @@ let rec extract_expr_cntxt expr =
       (match decls with
          (name, _) :: [] -> (c, Var name, i)
        | _ -> (c, Array(List.map (fun (name, _) -> Var name) decls), i))
-  | NullExpression | Int _ | Float _ | Bool _ | String _ | Var _ -> (Context.empty, expr, [])
+  | Int _ | Float _ | Bool _ | String _ | Var _ -> (Context.empty, expr, [])
 
 (* extract declarations from sub-expressions which aren't contained by
    the statement itself. for exaxmple, "int a" would be extracted from
@@ -156,9 +129,9 @@ let rec extract_expr_cntxt expr =
 let rec extract_stmt_cntxt stmt =
   match stmt with
     ExprStatement e -> let (c, e', i) = extract_expr_cntxt e in (c, ExprStatement e', i)
-  | Print args ->
+  | Ast.Print args ->
       let (c, args', i) = extract_list_cntxt args extract_expr_cntxt in
-      (c, Print args', i)
+      (c, Ast.Print args', i)
   | _ -> (Context.empty, stmt, [])
 
 (* returns the type which best covers t1 and t2 *)
@@ -181,169 +154,24 @@ let rec promote_type t1 t2 =
 
 let rec get_type d =
   match d with
-    ArrayData elems -> ArrayType (get_type (Array.get !(!elems) 0)) (* TODO: dAnGeRoUs *)
-  | RefData d' -> RefType (get_type !(!d'))
+    ArrayData elems -> raise (Not_implemented "get_type for arrays")
+  | RefData d' -> RefType (get_type d')
   | IntData _ -> IntType
   | BoolData _ -> BoolType
   | FloatData _ -> FloatType
   | StringData _ -> StringType
 
-(* the make_* functions generate instructions to cast from a data's
-   original time to the wanted type, and returns a reference to the
-   converted data itself (not its box) *)
-
-let rec make_int d =
-  let out = ref (ref 0) in
-  match d with
-    ArrayData elems -> raise (Type_mismatch ("cannot use " ^ (string_of_type (get_type d)) ^ " as an int"))
-  | RefData d' -> raise (Type_mismatch ("cannot use " ^ (string_of_type (get_type d)) ^ " as an int"))
-  | IntData i -> ([], i)
-  | BoolData b -> ([Op(fun () -> out := ref (if !(!b) then 1 else 0))], out)
-  | FloatData f -> ([Op(fun () -> out := ref (int_of_float !(!f)))], out)
-  | StringData s -> ([Op(fun () -> out := ref (int_of_string !(!s)))], out)
-
-let make_float d =
-  let out = ref (ref 0.0) in
-  match d with
-    ArrayData elems -> raise (Type_mismatch ("cannot use " ^ (string_of_type (get_type d)) ^ " as a float"))
-  | RefData d' -> raise (Type_mismatch ("cannot use " ^ (string_of_type (get_type d)) ^ " as a float"))
-  | IntData i -> ([Op(fun () -> out := ref (float_of_int !(!i)))], out)
-  | BoolData b -> ([Op(fun () -> out := ref (if !(!b) then 1.0 else 0.0))], out)
-  | FloatData f -> ([], f)
-  | StringData s -> ([Op(fun () -> out := ref (float_of_string !(!s)))], out)
-
-let make_bool d =
-  let out = ref (ref false) in
-  match d with
-    ArrayData elems -> raise (Type_mismatch ("cannot use " ^ (string_of_type (get_type d)) ^ " as a bool"))
-  | RefData d' -> raise (Type_mismatch ("cannot use " ^ (string_of_type (get_type d)) ^ " as a bool"))
-  | IntData i -> ([Op(fun () -> out := ref (!(!i) != 0))], out)
-  | BoolData b -> ([], b)
-  | FloatData f -> ([Op(fun () -> out := ref (!(!f) != 0.))], out)
-  | StringData s -> ([Op(fun () -> out := ref ((String.length !(!s)) > 0))], out)
-
-let make_string d =
-  let out = ref (ref "") in
-  match d with
-    ArrayData elems -> raise (Type_mismatch ("cannot use " ^ (string_of_type (get_type d)) ^ " as a string"))
-  | RefData d' -> raise (Type_mismatch ("cannot use " ^ (string_of_type (get_type d)) ^ " as a string"))
-  | IntData i -> ([Op(fun () -> out := ref (string_of_int !(!i)))], out)
-  | BoolData b -> ([Op(fun () -> out := ref (string_of_bool !(!b)))], out)
-  | FloatData f -> ([Op(fun () -> out := ref (string_of_float !(!f)))], out)
-  | StringData s -> ([], s)
-
 let rec compile_expr cntxt expr =
   match expr with
-    NullExpression -> ([], BoolData(ref (ref true))) (* used only in for() w/blank exprs *)
-  | Int i -> ([], IntData(ref (ref i)))
-  | Float f -> ([], FloatData(ref (ref f)))
-  | Bool b -> ([], BoolData(ref (ref b)))
-  | String s -> ([], StringData(ref (ref s)))
-  | Var name ->
-      (try let (_, d) = Context.find name cntxt in ([], d)
-       with Not_found -> raise (Undeclared_variable name))
+    Int i -> [Push (IntData i)]
+  | Float f -> [Push (FloatData f)]
+  | Bool b -> [Push (BoolData b)]
+  | String s -> [Push (StringData s)]
+  | Var name -> raise (Not_implemented "cannot compile variable expressions")
   | Array exprs -> raise (Not_implemented "cannot compile array expressions")
-      (*
-      let pairs = List.map (fun e -> compile_expr cntxt e) exprs in
-      let instrs = List.fold_left (fun i (i', _) -> i @ i') [] pairs in
-      let arr = Array.of_list (List.map (fun (_, d) -> d) pairs) in
-      (instrs, ArrayData(ref arr))
-      *)
-  | Comma exprs ->
-      List.fold_left
-        (fun (i, d) e -> let (i', d) = compile_expr cntxt e in (i @ i', d))
-        ([], IntData(ref (ref 0))) (* the data on the right here is a placeholder, overwritten by fun above *)
-        exprs
+  | Comma exprs -> List.fold_left (fun instrs e -> instrs @ (compile_expr cntxt e)) [] exprs
   | UnaryExpr (op, e1) -> raise (Not_implemented "cannot compile unary expressions")
-  | BinaryExpr (op, e1, e2) ->
-      let (i1, d1) = compile_expr cntxt e1 in
-      let (i2, d2) = compile_expr cntxt e2 in
-      let t1 = get_type d1 in
-      let t2 = get_type d2 in
-      let t = promote_type t1 t2 in
-      let binop f left right out = [Op(fun () -> out := ref (f !(!left) !(!right)))] in
-      let assignment left right out = [Op(fun () -> !right := !(!left); out := !right)] in
-      let increment f left right out = [Op(fun () -> !right := f !(!right) !(!left); out := !right)] in
-      let compile_binop (i1', l) (i2', r) initval dataf op =
-        let out = ref (ref initval) in
-        (i1 @ i2 @ i1' @ i2' @ (op l r out), dataf out)
-      in
-      let ints = compile_binop (make_int d1) (make_int d2) 0 (fun o -> IntData o) in
-      let floats = compile_binop (make_float d1) (make_float d2) 0.0 (fun o -> FloatData o) in
-      let strings = compile_binop (make_string d1) (make_string d2) "" (fun o -> StringData o) in
-      let bools = compile_binop (make_bool d1) (make_bool d2) false (fun o -> BoolData o) in
-      let fail op = raise (Type_mismatch ("cannot compile " ^ (string_of_type t1) ^ " " ^ op ^ " " ^ (string_of_type t2))) in
-      (match op with
-         Plus -> (match t with
-                    IntType -> ints (binop (+))
-                  | FloatType -> floats (binop (+.))
-                  | StringType -> strings (binop (^))
-                  | _ -> fail "+")
-       | Minus -> (match t with
-                     IntType -> ints (binop (-))
-                   | FloatType -> floats (binop (-.))
-                   | _ -> fail "-")
-       | Multiply -> (match t with
-                        IntType -> ints (binop ( * ))
-                      | FloatType -> floats (binop ( *. ))
-                      | _ -> fail "*")
-       | Divide -> (match t with
-                      IntType -> ints (binop (/))
-                    | FloatType -> floats (binop (/.))
-                    | _ -> fail "/")
-       | Modulo -> (match t with IntType -> ints (binop (mod)) | _ -> fail "%")
-       | Exponentiate -> (match t with IntType | FloatType -> floats (binop ( ** )) | _ -> fail "^")
-       | BinaryOr -> bools (binop (||))
-       | BinaryAnd -> bools (binop (&&))
-       | LessThan ->
-           (match t with
-              IntType -> compile_binop (make_int d1) (make_int d2) false (fun o -> BoolData o) (binop (<))
-            | FloatType -> compile_binop (make_float d1) (make_float d2) false (fun o -> BoolData o) (binop (<))
-            | _ -> fail "<")
-       | LessThanOrEqualTo ->
-           (match t with
-              IntType -> compile_binop (make_int d1) (make_int d2) false (fun o -> BoolData o) (binop (<))
-            | FloatType -> compile_binop (make_float d1) (make_float d2) false (fun o -> BoolData o) (binop (<))
-            | _ -> fail "<=")
-       | GreaterThan ->
-           (match t with
-              IntType -> compile_binop (make_int d1) (make_int d2) false (fun o -> BoolData o) (binop (>))
-            | FloatType -> compile_binop (make_float d1) (make_float d2) false (fun o -> BoolData o) (binop (>))
-            | _ -> fail "<")
-       | GreaterThanOrEqualTo ->
-           (match t with
-              IntType -> compile_binop (make_int d1) (make_int d2) false (fun o -> BoolData o) (binop (>=))
-            | FloatType -> compile_binop (make_float d1) (make_float d2) false (fun o -> BoolData o) (binop (>=))
-            | _ -> fail "<=")
-       | Equals ->
-           (match t with
-              IntType -> compile_binop (make_int d1) (make_int d2) false (fun o -> BoolData o) (binop (=))
-            | FloatType -> compile_binop (make_float d1) (make_float d2) false (fun o -> BoolData o) (binop (=))
-            | StringType -> compile_binop (make_string d1) (make_string d2) false (fun o -> BoolData o) (binop (=))
-            | _ -> fail "=")
-       | NotEquals ->
-           (match t with
-              IntType -> compile_binop (make_int d1) (make_int d2) false (fun o -> BoolData o) (binop (<>))
-            | FloatType -> compile_binop (make_float d1) (make_float d2) false (fun o -> BoolData o) (binop (<>))
-            | StringType -> compile_binop (make_string d1) (make_string d2) false (fun o -> BoolData o) (binop (<>))
-            | _ -> fail "!=")
-       | Chuck -> (* TODO: you can ChucK to anything, even like "10 => 20" *)
-           (match t2 with
-              ArrayType t' -> raise (Not_implemented "can't chuck to arrays")
-            | RefType t' -> raise (Not_implemented "can't chuck to references")
-            | IntType -> compile_binop (make_int d1) (make_int d2) 0 (fun o -> IntData o) assignment
-            | FloatType -> compile_binop (make_float d1) (make_float d2) 0.0 (fun o -> FloatData o) assignment
-            | BoolType -> compile_binop (make_bool d1) (make_bool d2) false (fun o -> BoolData o) assignment
-            | StringType -> compile_binop (make_string d1) (make_string d2) "" (fun o -> StringData o) assignment)
-       | Pluschuck -> (* TODO: you can ChucK to anything, even like "10 +=> 20" *)
-           (match t2 with
-              ArrayType t' -> raise (Not_implemented "can't +=> arrays")
-            | RefType t' -> raise (Not_implemented "can't +=> references")
-            | IntType -> compile_binop (make_int d1) (make_int d2) 0 (fun o -> IntData o) (increment (+))
-            | FloatType -> compile_binop (make_float d1) (make_float d2) 0.0 (fun o -> FloatData o) (increment (+.))
-            | BoolType -> raise (Not_implemented "can't +=> booleans")
-            | StringType -> compile_binop (make_string d1) (make_string d2) "" (fun o -> StringData o) (increment (^)))
-       | _ -> raise (Not_implemented "cannot compile this type of binary expression"))
+  | BinaryExpr (op, e1, e2) -> raise (Not_implemented "cannot compile binary expressions")
   | Member (e1, mem) -> raise (Not_implemented "cannot compile member expressions")
   | FunCall (e1, args) -> raise (Not_implemented "cannot compile function calls")
   | Cast (e1, t) -> raise (Not_implemented "cannot compile casts")
@@ -353,53 +181,16 @@ let rec compile_expr cntxt expr =
   | Time (e1, e2) -> raise (Not_implemented "cannot compile time expressions")
   | Declaration decls -> raise (Compiler_error "declaration wasn't extracted earlier")
 
-(* prints a list of expressions (used for compiling print statements) *)
-let print_data args =
-  let rec pair_of_data d =
-    match d with
-      ArrayData arr -> ((fun () -> "array"), "array")
-    | RefData d' -> let (v, t) = pair_of_data !(!d') in (v, t ^ " ref")
-    | IntData i -> ((fun () -> string_of_int !(!i)), "int")
-    | BoolData b -> ((fun () -> string_of_bool !(!b)), "bool")
-    | FloatData f -> ((fun () -> string_of_float !(!f)), "float")
-    | StringData s -> ((fun () -> !(!s)), "string")
-  in
-  let pairs = List.map (fun d -> pair_of_data d) args in
-  match pairs with
-    (v, t) :: [] -> fun () -> print_endline ((v ()) ^ " :(" ^ t ^ ")")
-  | _ -> fun () -> print_endline (String.concat " " (List.map (fun (v, _) -> v ()) pairs))
-
 let rec compile_stmt parent_cntxt local_cntxt stmt =
   let (subcntxt, stmt', init_instrs) = extract_stmt_cntxt stmt in
   let cntxt = combine_cntxts true parent_cntxt (combine_cntxts false local_cntxt subcntxt) in
   let instrs =
     match stmt' with
       NullStatement -> []
-    | ExprStatement e -> let (i, _) = compile_expr cntxt e in i
-    | Print args ->
-        let compiled_exprs = List.map (fun e -> compile_expr cntxt e) args in
-        let instrs = List.fold_left (fun i (i', _) -> i @ i') [] compiled_exprs in
-        let args' = List.map (fun (_, d) -> d) compiled_exprs in
-        instrs @ [Op(print_data args')]
-    | If (condexpr, then_stmts, else_stmts) ->
-        let (cond_cntxt, condexpr', pre_cond_instrs) = extract_expr_cntxt condexpr in
-        let (cond_instrs, cond_precast_out) = compile_expr cntxt condexpr' in
-        let (cond_cast_instrs, cond_out) = make_bool cond_precast_out in
-        let body_cntxt = combine_cntxts true cntxt cond_cntxt in
-        pre_cond_instrs (* build context for condition expression *)
-          @ cond_instrs (* evaluate the condition expression *)
-          @ cond_cast_instrs (* cast the result to a bool if needed *)
-          @ [Branch(cond_out, compile_stmts body_cntxt then_stmts, compile_stmts body_cntxt else_stmts)]
-    | While (condexpr, stmts) ->
-        let (cond_cntxt, condexpr', pre_cond_instrs) = extract_expr_cntxt condexpr in
-        let (cond_instrs, cond_precast_out) = compile_expr cntxt condexpr' in
-        let (cond_cast_instrs, cond_out) = make_bool cond_precast_out in
-        let body_cntxt = combine_cntxts true cntxt cond_cntxt in
-        pre_cond_instrs
-          @ cond_instrs
-          @ cond_cast_instrs
-          @ [Loop(cond_out, (compile_stmts body_cntxt stmts) @ cond_instrs @ cond_cast_instrs)]
-    | Ast.Break -> [Break]
+    | ExprStatement e -> compile_expr cntxt e
+    | Ast.Print args ->
+        let instrs = List.fold_left (fun instrs e -> instrs @ (compile_expr cntxt e)) [] args in
+        instrs @ [Print (List.length args)]
     | _ -> raise (Not_implemented "cannot compile this type of statement")
   in
   (subcntxt, init_instrs @ instrs)

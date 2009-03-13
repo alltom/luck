@@ -28,8 +28,7 @@ type
   and
 
   expr =
-    NullExpression
-  | Int of int
+    Int of int
   | Float of float
   | Bool of bool
   | String of string
@@ -78,8 +77,7 @@ let string_of_type (Type(name, reference, static, arrdep)) =
 
 let rec string_of_expr expr =
   match expr with
-    NullExpression -> "nullexpr"
-  | Int i -> "int " ^ (string_of_int i)
+    Int i -> "int " ^ (string_of_int i)
   | Float f -> "float " ^ (string_of_float f)
   | Bool b -> "bool " ^ (string_of_bool b)
   | String s -> "string \"" ^ s ^ "\""

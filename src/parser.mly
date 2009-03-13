@@ -121,7 +121,7 @@ declarator_list:
 ;
 
 optional_exp:
-  { NullExpression }
+  { Bool(true) } /* handy for empty expressions in for loops */
 | exp { $1 }
 ;
 

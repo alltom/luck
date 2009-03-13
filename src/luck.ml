@@ -16,6 +16,9 @@ let main () =
     | Redeclaration -> prerr_endline "variable redeclaration"; exit 1
     | Undeclared_variable v -> prerr_endline ("using variable " ^ v ^ " without declaring it"); exit 1
   in
-  run instrs
+  print_endline "Instructions:";
+  List.iter (fun i -> print_endline ("\t" ^ (string_of_instruction i))) instrs;
+  print_endline "---";
+  run instrs []
 
 let _ = main ()

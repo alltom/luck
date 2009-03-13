@@ -139,18 +139,16 @@ let rec promote_type t1 t2 =
   let fail () =
     raise (Type_mismatch ("incompatible types " ^ (string_of_type t1) ^ " and " ^ (string_of_type t2)))
   in
+  if t1 = t2 then t1 else
   match (t1, t2) with
     (ArrayType t1', ArrayType t2') -> ArrayType(promote_type t1' t2')
   | (ArrayType _, _) | (_, ArrayType _) -> fail ()
   | (RefType t1', RefType t2') -> RefType(promote_type t1' t2')
   | (RefType _, _) | (_, RefType _) -> fail ()
-  | (IntType, IntType) -> IntType
-  | (FloatType, FloatType) -> FloatType
-  | (BoolType, BoolType) -> BoolType
-  | (StringType, StringType) -> StringType
   | (StringType, _) | (_, StringType) -> StringType
   | (FloatType, _) | (_, FloatType) -> FloatType
   | (IntType, _) | (_, IntType) -> IntType
+  | _ -> fail ()
 
 let rec get_type d =
   match d with
@@ -160,6 +158,14 @@ let rec get_type d =
   | BoolData _ -> BoolType
   | FloatData _ -> FloatType
   | StringData _ -> StringType
+
+let cast a b =
+  if a = b then
+    []
+  else
+    match (a, b) with
+      (IntType, BoolType) -> [IBoolCast]
+    | _ -> error ("cannot convert from " ^ (string_of_type a) ^ " to " ^ (string_of_type b))
 
 (* TODO: add casts *)
 (* TODO: check variables for existence *)
@@ -184,7 +190,8 @@ let rec compile_expr cntxt expr =
       let (tc, ic) = compile_expr cntxt cond in
       let (t1, i1) = compile_expr cntxt e1 in
       let (t2, i2) = compile_expr cntxt e2 in
-      (t1, ic @ [IBranch (i1, i2)])
+      let return_type = promote_type t1 t2 in
+      (return_type, ic @ (cast tc BoolType) @ [IBranch (i1 @ (cast t1 return_type), i2 @ (cast t2 return_type))])
   | Subscript (e1, e2) -> raise (Not_implemented "cannot compile subscription")
   | Time (e1, e2) -> raise (Not_implemented "cannot compile time expressions")
   | Declaration decls -> raise (Compiler_error "declaration wasn't extracted earlier")
@@ -199,7 +206,9 @@ let rec compile_stmt parent_cntxt local_cntxt stmt =
     match stmt' with
       NullStatement -> []
     | ExprStatement e -> let (t, i) = compile_expr cntxt e in i @ [IDiscard]
-    | If (e, s1, s2) -> let (t, i) = compile_expr cntxt e in i @ [IBranch (compile_stmts cntxt s1, compile_stmts cntxt s2)]
+    | If (e, s1, s2) ->
+        let (t, i) = compile_expr cntxt e in
+        i @ (cast t BoolType) @ [IBranch (compile_stmts cntxt s1, compile_stmts cntxt s2)]
     | Print args ->
         let instrs = List.fold_left (fun instrs e -> let (t, i) = compile_expr cntxt e in instrs @ i) [] args in
         instrs @ [IPrint (List.length args)]

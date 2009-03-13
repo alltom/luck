@@ -15,6 +15,7 @@ and instruction =
 | IAssign of string (* puts top stack value in variable with given name; leaves value on stack *)
 | IBranch of frame * frame
 | IPrint of int (* number of things to print (consumes) *)
+| IBoolCast
 
 and frame = instruction list
 
@@ -40,6 +41,7 @@ let rec string_of_instruction = function
 | IAssign s -> "assign " ^ s
 | IBranch (f1, f2) -> "if (" ^ (String.concat "; " (List.map string_of_instruction f1)) ^ ") (" ^ (String.concat "; " (List.map string_of_instruction f2)) ^ ")"
 | IPrint i -> "print " ^ (string_of_int i)
+| IBoolCast -> "cast to bool"
   
 let error msg =
   raise (Machine_error msg)
@@ -85,6 +87,12 @@ let exec instr frms stck envs =
       let (cond, stck) = pop_bool stck in
       ((if cond then f1 else f2) :: frms, stck, envs)
   | IPrint count -> (frms, (print count stck), envs)
+  | IBoolCast ->
+      let (v, stck) = pop stck in
+      (match v with
+         IntData i -> (frms, (BoolData (i != 0)) :: stck, envs)
+       | BoolData b -> (frms, v :: stck, envs)
+       | _ -> error "cannot convert to bool")
 
 let run frm env =
   let rec loop (frms, stck, envs) =

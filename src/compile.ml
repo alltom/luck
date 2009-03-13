@@ -190,7 +190,7 @@ let rec compile_stmt parent_cntxt local_cntxt stmt =
   let instrs =
     match stmt' with
       NullStatement -> []
-    | ExprStatement e -> compile_expr cntxt e
+    | ExprStatement e -> (compile_expr cntxt e) @ [IDiscard]
     | Print args ->
         let instrs = List.fold_left (fun instrs e -> instrs @ (compile_expr cntxt e)) [] args in
         instrs @ [IPrint (List.length args)]

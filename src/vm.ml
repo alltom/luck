@@ -9,10 +9,11 @@ type data =
 
 and instruction =
   IPush of data
+| IDiscard
 | IInit of string * data
 | IPushVar of string
-| IAssign of string
-| IPrint of int (* number of things to print *)
+| IAssign of string (* puts top stack value in variable with given name; leaves value on stack *)
+| IPrint of int (* number of things to print (consumes) *)
 
 and frame = instruction list
 
@@ -32,6 +33,7 @@ let string_of_data = function
 
 let string_of_instruction = function
   IPush d -> "push value " ^ (string_of_data d)
+| IDiscard -> "discard"
 | IInit (v, d) -> "init " ^ v ^ " = " ^ (string_of_data d)
 | IPushVar v -> "push var " ^ v
 | IAssign s -> "assign " ^ s
@@ -67,9 +69,10 @@ let assign envs var v = (lookup envs var) := v
 let exec instr frms stck envs =
   match instr with
     IPush d -> (frms, d :: stck, envs)
+  | IDiscard -> let (v, stck) = pop stck in (frms, stck, envs)
   | IInit (v, d) -> (match envs with env::rest -> (frms, stck, (env_insert v d env) :: rest) | [] -> error "weird environment")
   | IPushVar var -> (frms, !(lookup envs var) :: stck, envs)
-  | IAssign var -> let (v, stck) = pop stck in assign envs var v; (frms, stck, envs)
+  | IAssign var -> let (v, stck) = pop stck in assign envs var v; (frms, v :: stck, envs)
   | IPrint count -> (frms, (print count stck), envs)
 
 let run frm env =

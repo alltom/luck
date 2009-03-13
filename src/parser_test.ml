@@ -65,6 +65,8 @@ let _ =
   (* fair-weather expressions *)
   t "4;" [] [] [es (Int 4)];
   t "4.;" [] [] [es (Float 4.)];
+  t "-4;" [] [] [es (Int (-4))];
+  t "-4.;" [] [] [es (Float (-4.))];
   t "true;" [] [] [es (Bool true)];
   t "false;" [] [] [es (Bool false)];
   t "a;" [] [] [es a];

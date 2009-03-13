@@ -13,7 +13,7 @@ and instruction =
 
 and frame = instruction list
 
-and environment = (string * data) list
+and environment = (string * data ref) list
 
 and stack = data list
 

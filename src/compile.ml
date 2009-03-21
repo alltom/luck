@@ -176,7 +176,7 @@ let rec compile_expr cntxt expr =
   | Float f -> FloatType, [IPush (FloatData f)]
   | Bool b -> BoolType, [IPush (BoolData b)]
   | String s -> StringType, [IPush (StringData s)]
-  | Var name -> (Context.find name cntxt), [IPushVar name]
+  | Var name -> (try Context.find name cntxt with Not_found -> raise (Undeclared_variable name)), [IPushVar name]
   | Array exprs -> raise (Not_implemented "cannot compile array expressions")
   | Comma exprs -> List.fold_left (fun (t, instrs) e -> let (t, i) = compile_expr cntxt e in (t, instrs @ [IDiscard] @ i)) (BoolType, [IPush (BoolData false)]) exprs (* TODO: doity *)
   | UnaryExpr (op, e1) -> raise (Not_implemented "cannot compile unary expressions")
@@ -201,7 +201,6 @@ let rec compile_expr cntxt expr =
   | Time (e1, e2) -> raise (Not_implemented "cannot compile time expressions")
   | Declaration decls -> raise (Compiler_error "declaration wasn't extracted earlier")
 
-(* TODO: add if cast *)
 (* when a statement finishes executing, the stack should be how it was before *)
 let rec compile_stmt parent_cntxt local_cntxt stmt =
   let (subcntxt, stmt', init_instrs) = extract_stmt_cntxt stmt in
@@ -215,8 +214,10 @@ let rec compile_stmt parent_cntxt local_cntxt stmt =
         let (t, i) = compile_expr cntxt e in
         i @ (cast t BoolType) @ [IBranch (compile_stmts cntxt s1, compile_stmts cntxt s2)]
     | While (cond, stmts) ->
+        let (cond_cntxt, cond, cond_init) = extract_expr_cntxt cond in
+        let cntxt = combine_cntxts true cntxt cond_cntxt in
         let (tc, ic) = compile_expr cntxt cond in
-        ic @ (cast tc BoolType) @ [IWhile (ic @ (cast tc BoolType), compile_stmts cntxt stmts)]
+        cond_init @ ic @ (cast tc BoolType) @ [IWhile (ic @ (cast tc BoolType), compile_stmts cntxt stmts)]
     | Print args ->
         let instrs = List.fold_left (fun instrs e -> let (t, i) = compile_expr cntxt e in instrs @ i) [] args in
         instrs @ [IPrint (List.length args)]

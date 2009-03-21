@@ -210,9 +210,11 @@ let rec compile_stmt parent_cntxt local_cntxt stmt =
     match stmt' with
       NullStatement -> []
     | ExprStatement e -> let (t, i) = compile_expr cntxt e in i @ [IDiscard]
-    | If (e, s1, s2) ->
-        let (t, i) = compile_expr cntxt e in
-        i @ (cast t BoolType) @ [IBranch (compile_stmts cntxt s1, compile_stmts cntxt s2)]
+    | If (cond, s1, s2) ->
+        let (cond_cntxt, cond, cond_init) = extract_expr_cntxt cond in
+        let cntxt = combine_cntxts true cntxt cond_cntxt in
+        let (tc, ic) = compile_expr cntxt cond in
+        cond_init @ ic @ (cast tc BoolType) @ [IBranch (compile_stmts cntxt s1, compile_stmts cntxt s2)]
     | While (cond, stmts) ->
         let (cond_cntxt, cond, cond_init) = extract_expr_cntxt cond in
         let cntxt = combine_cntxts true cntxt cond_cntxt in

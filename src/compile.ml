@@ -214,12 +214,12 @@ let rec compile_stmt parent_cntxt local_cntxt stmt =
         let (cond_cntxt, cond, cond_init) = extract_expr_cntxt cond in
         let cntxt = combine_cntxts true cntxt cond_cntxt in
         let (tc, ic) = compile_expr cntxt cond in
-        cond_init @ ic @ (cast tc BoolType) @ [IBranch (compile_stmts cntxt s1, compile_stmts cntxt s2)]
+        [IPushEnv] @ cond_init @ ic @ (cast tc BoolType) @ [IBranch (compile_stmts cntxt s1, compile_stmts cntxt s2)] @ [IPopEnv]
     | While (cond, stmts) ->
         let (cond_cntxt, cond, cond_init) = extract_expr_cntxt cond in
         let cntxt = combine_cntxts true cntxt cond_cntxt in
         let (tc, ic) = compile_expr cntxt cond in
-        cond_init @ ic @ (cast tc BoolType) @ [IWhile (ic @ (cast tc BoolType), compile_stmts cntxt stmts)]
+        [IPushEnv] @ cond_init @ ic @ (cast tc BoolType) @ [IWhile (ic @ (cast tc BoolType), compile_stmts cntxt stmts)] @ [IPopEnv]
     | Print args ->
         let instrs = List.fold_left (fun instrs e -> let (t, i) = compile_expr cntxt e in instrs @ i) [] args in
         instrs @ [IPrint (List.length args)]

@@ -8,7 +8,8 @@ type data =
 | StringData of string
 
 and instruction =
-  IPush of data
+  IPushEnv | IPopEnv
+| IPush of data
 | IDiscard
 | IInit of string * data
 | IPushVar of string
@@ -36,7 +37,9 @@ let string_of_data = function
 | StringData s -> s
 
 let rec string_of_instruction = function
-  IPush d -> "push value " ^ (string_of_data d)
+  IPushEnv -> "push env"
+| IPopEnv -> "pop env"
+| IPush d -> "push value " ^ (string_of_data d)
 | IDiscard -> "discard"
 | IInit (v, d) -> "init " ^ v ^ " = " ^ (string_of_data d)
 | IPushVar v -> "push var " ^ v
@@ -86,10 +89,12 @@ let assign envs var v = (lookup envs var) := v
 
 let exec instr frms stck envs =
   match instr with
-    IPush d -> (frms, d :: stck, envs)
+    IPushEnv -> (frms, stck, [] :: envs)
+  | IPopEnv -> (match envs with _ :: envs -> (frms, stck, envs) | _ -> error "cannot pop environment")
+  | IPush d -> (frms, d :: stck, envs)
+  | IPushVar var -> (frms, !(lookup envs var) :: stck, envs)
   | IDiscard -> let (v, stck) = pop stck in (frms, stck, envs)
   | IInit (v, d) -> (match envs with env::rest -> (frms, stck, (env_insert v d env) :: rest) | [] -> error "weird environment")
-  | IPushVar var -> (frms, !(lookup envs var) :: stck, envs)
   | IAssign var -> let (v, stck) = pop stck in assign envs var v; (frms, v :: stck, envs)
   | IBranch (f1, f2) ->
       let (cond, stck) = pop_bool stck in

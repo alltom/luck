@@ -34,3 +34,4 @@
        [[things that work]]
            4 => int a;
            <<< "a =", a >>>;
+           while(int a < 10) <<< a + 1 => a >>>;

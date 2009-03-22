@@ -37,7 +37,8 @@ and instruction =
 | IWhile of frame * (typ Context.t) * frame (* condition, body context, body instructions *)
 | IPrint of int (* number of things to print (consumes) *)
 | IBoolCast
-| IAddInt
+| IAdd
+| ILessThan
 
 and frame = instruction list
 
@@ -67,7 +68,8 @@ let rec string_of_instruction = function
 | IWhile (f1, cntxt, f2) -> "while (" ^ (String.concat "; " (List.map string_of_instruction f1)) ^ ") { " ^ (String.concat "; " (List.map string_of_instruction f2)) ^ " }"
 | IPrint i -> "print " ^ (string_of_int i)
 | IBoolCast -> "cast to bool"
-| IAddInt -> "add (int)"
+| IAdd -> "add"
+| ILessThan -> "less than"
   
 let error msg =
   raise (Machine_error msg)
@@ -143,10 +145,18 @@ let exec instr frms stck envs =
          IntData i -> (frms, (BoolData (i != 0)) :: stck, envs)
        | BoolData b -> (frms, v :: stck, envs)
        | _ -> error "cannot convert to bool")
-  | IAddInt ->
-      let (i1, stck) = pop_int stck in
-      let (i2, stck) = pop_int stck in
-      (frms, (IntData (i1 + i2)) :: stck, envs)
+  | IAdd ->
+      let (b, stck) = pop stck in
+      let (a, stck) = pop stck in
+      (match (a, b) with
+         (IntData a, IntData b) -> (frms, (IntData (a + b)) :: stck, envs)
+       | _ -> error "cannot add these data types")
+  | ILessThan ->
+      let (b, stck) = pop stck in
+      let (a, stck) = pop stck in
+      (match (a, b) with
+         (IntData a, IntData b) -> (frms, (BoolData (a < b)) :: stck, envs)
+       | _ -> error "cannot compare these data types")
 
 let run frm env =
   let rec loop (frms, stck, envs) =

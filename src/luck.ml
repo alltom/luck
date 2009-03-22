@@ -8,7 +8,7 @@ let main () =
     try Parser.input Lexer.token (Lexing.from_channel stdin)
     with Parsing.Parse_error -> exit 1
   in
-  let instrs =
+  let (cntxt, instrs) =
     try compile tree
     with
       Compiler_error msg -> prerr_endline ("compiler error: " ^ msg); exit 1
@@ -18,6 +18,6 @@ let main () =
   in
   List.iter (fun i -> print_endline ("\t" ^ (string_of_instruction i))) instrs;
   print_endline "---";
-  run instrs []
+  run instrs (inst_context cntxt)
 
 let _ = main ()

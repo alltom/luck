@@ -1,4 +1,23 @@
 
+type typ =
+  ArrayType of typ
+| RefType of typ
+| IntType | FloatType | BoolType | StringType
+
+let rec string_of_type t =
+  match t with
+    ArrayType t' -> (string_of_type t') ^ "[]"
+  | RefType t' -> (string_of_type t') ^ "@"
+  | IntType -> "int"
+  | BoolType -> "bool"
+  | FloatType -> "float"
+  | StringType -> "string"
+
+module Context = Map.Make(String)
+
+let strings_of_cntxt cntxt =
+  Context.fold (fun name (t, d) lst -> ((string_of_type t) ^ " " ^ name) :: lst) cntxt []
+
 type data =
   ArrayData of data array
 | RefData of data
@@ -8,14 +27,14 @@ type data =
 | StringData of string
 
 and instruction =
-  IPushEnv | IPopEnv
+  IPushEnv of (typ Context.t) | IPopEnv
 | IPush of data
 | IDiscard
 | IInit of string * data
 | IPushVar of string
 | IAssign of string (* puts top stack value in variable with given name; leaves value on stack *)
 | IBranch of frame * frame (* if true body, if false body *)
-| IWhile of frame * frame (* condition, body *)
+| IWhile of frame * (typ Context.t) * frame (* condition, body context, body instructions *)
 | IPrint of int (* number of things to print (consumes) *)
 | IBoolCast
 | IAddInt
@@ -37,7 +56,7 @@ let string_of_data = function
 | StringData s -> s
 
 let rec string_of_instruction = function
-  IPushEnv -> "push env"
+  IPushEnv cntxt -> "push env"
 | IPopEnv -> "pop env"
 | IPush d -> "push value " ^ (string_of_data d)
 | IDiscard -> "discard"
@@ -45,7 +64,7 @@ let rec string_of_instruction = function
 | IPushVar v -> "push var " ^ v
 | IAssign s -> "assign " ^ s
 | IBranch (f1, f2) -> "if (" ^ (String.concat "; " (List.map string_of_instruction f1)) ^ ") (" ^ (String.concat "; " (List.map string_of_instruction f2)) ^ ")"
-| IWhile (f1, f2) -> "while (" ^ (String.concat "; " (List.map string_of_instruction f1)) ^ ") { " ^ (String.concat "; " (List.map string_of_instruction f2)) ^ " }"
+| IWhile (f1, cntxt, f2) -> "while (" ^ (String.concat "; " (List.map string_of_instruction f1)) ^ ") { " ^ (String.concat "; " (List.map string_of_instruction f2)) ^ " }"
 | IPrint i -> "print " ^ (string_of_int i)
 | IBoolCast -> "cast to bool"
 | IAddInt -> "add (int)"
@@ -87,9 +106,19 @@ let rec lookup envs var =
 let env_insert var v env = (var, ref v) :: env
 let assign envs var v = (lookup envs var) := v
 
+let inst_context cntxt =
+  let inst_type name = function
+      IntType -> IntData 0
+    | FloatType -> FloatData 0.0
+    | BoolType -> BoolData false
+    | StringType -> StringData ""
+    | _ -> error "cannot instantiate that type yet"
+  in
+  Context.fold (fun name t env -> env_insert name (inst_type name t) env) cntxt []
+
 let exec instr frms stck envs =
   match instr with
-    IPushEnv -> (frms, stck, [] :: envs)
+    IPushEnv cntxt -> (frms, stck, (inst_context cntxt) :: envs)
   | IPopEnv -> (match envs with _ :: envs -> (frms, stck, envs) | _ -> error "cannot pop environment")
   | IPush d -> (frms, d :: stck, envs)
   | IPushVar var -> (frms, !(lookup envs var) :: stck, envs)
@@ -99,11 +128,11 @@ let exec instr frms stck envs =
   | IBranch (f1, f2) ->
       let (cond, stck) = pop_bool stck in
       ((if cond then f1 else f2) :: frms, stck, envs)
-  | IWhile (condframe, bodyframe) ->
+  | IWhile (condframe, body_cntxt, body_frame) -> (* TODO: push body context first time into while *)
       let (cond, stck) = pop_bool stck in
       if cond then
         (match frms with
-           f1 :: rest -> ((bodyframe @ condframe) :: (instr :: f1) :: rest, stck, envs)
+           f1 :: rest -> ((body_frame @ condframe) :: (instr :: f1) :: rest, stck, envs)
          | _ -> error "weird stack: expecting a frame")
       else
         (frms, stck, envs)

@@ -114,8 +114,7 @@ let rec promote_type t1 t2 =
   in
   if t1 = t2 then t1 else
   match (t1, t2) with
-    (ArrayType t1', ArrayType t2') -> ArrayType(promote_type t1' t2')
-  | (ArrayType _, _) | (_, ArrayType _) -> fail ()
+    (ArrayType (_, _), _) | (_, ArrayType (_, _)) -> fail ()
   | (RefType t1', RefType t2') -> RefType(promote_type t1' t2')
   | (RefType _, _) | (_, RefType _) -> fail ()
   | (StringType, _) | (_, StringType) -> StringType
@@ -126,7 +125,7 @@ let rec promote_type t1 t2 =
 let rec get_type d =
   match d with
     ArrayData elems -> raise (Not_implemented "get_type for arrays")
-  | RefData d' -> RefType (get_type d')
+  | RefData d' -> RefType (get_type !d')
   | IntData _ -> IntType
   | BoolData _ -> BoolType
   | FloatData _ -> FloatType

@@ -1,36 +1,30 @@
 
+exception Machine_error of string
+let error msg =
+  raise (Machine_error msg)
+
 type typ =
-  ArrayType of typ
+  ArrayType of array_dimension * typ
 | RefType of typ
 | IntType | FloatType | BoolType | StringType
-
-let rec string_of_type t =
-  match t with
-    ArrayType t' -> (string_of_type t') ^ "[]"
-  | RefType t' -> (string_of_type t') ^ "@"
-  | IntType -> "int"
-  | BoolType -> "bool"
-  | FloatType -> "float"
-  | StringType -> "string"
-
-module Context = Map.Make(String)
-
-let strings_of_cntxt cntxt =
-  Context.fold (fun name (t, d) lst -> ((string_of_type t) ^ " " ^ name) :: lst) cntxt []
+and array_dimension = Dynamic | Static of int
 
 type data =
   ArrayData of data array
-| RefData of data
+| RefData of data ref
 | IntData of int
 | BoolData of bool
 | FloatData of float
 | StringData of string
 
-and instruction =
+(* map from string names to data types;
+   used as template for creating environments *)
+module Context = Map.Make(String)
+
+type instruction =
   IPushEnv of (typ Context.t) | IPopEnv
 | IPush of data
 | IDiscard
-| IInit of string * data
 | IPushVar of string
 | IAssign of string (* puts top stack value in variable with given name; leaves value on stack *)
 | IBranch of instruction list * instruction list (* if true body, if false body *)
@@ -41,15 +35,43 @@ and instruction =
 | IAdd | ISubtract | IMultiply | IDivide
 | ILessThan | IGreaterThan
 
-and frame_type =
-  Frame
-| LoopFrame of instruction list (* body of loop *)
+(* instruction lists are popped and pushed in blocks called frames
+   as functions are called, loops entered, etc *)
+type frame_type = Frame | LoopFrame of instruction list (* body of loop *)
 
-and environment = (string * data ref) list
+(* an execution environment; all the variables and functions are stored here *)
+(* TODO: when classes are implemented, functions may split into their own container *)
+module Env =
+  struct
+    module StringMap = Map.Make(String)
+    type func = typ * typ list * instruction list
+    type member = data ref
+    type environment = func StringMap.t * member StringMap.t
+    let empty : environment = StringMap.empty, StringMap.empty
+    let add_func name fn = function funcs, mems -> (StringMap.add name fn funcs, mems)
+    let add_mem name v = function funcs, mems -> (funcs, StringMap.add name v mems)
+    let find_func name = function funcs, _ -> StringMap.find name funcs
+    let find_mem name = function _, mems -> StringMap.find name mems
+  end
 
-and stack = data list
+let rec find_mem envs var =
+  match envs with
+    env :: rest -> (try Env.find_mem var env with Not_found -> find_mem rest var)
+  | [] -> error ("variable " ^ var ^ " does not exist")
 
-exception Machine_error of string
+(* STRING CONVERSIONS *)
+
+let rec string_of_type t =
+  match t with
+    ArrayType (sz, t') -> (string_of_type t') ^ "[]"
+  | RefType t' -> (string_of_type t') ^ "@"
+  | IntType -> "int"
+  | BoolType -> "bool"
+  | FloatType -> "float"
+  | StringType -> "string"
+
+let strings_of_cntxt cntxt =
+  Context.fold (fun name (t, d) lst -> ((string_of_type t) ^ " " ^ name) :: lst) cntxt []
 
 let string_of_data = function
   ArrayData a -> "array"
@@ -64,7 +86,6 @@ let rec string_of_instruction = function
 | IPopEnv -> "pop env"
 | IPush d -> "push value " ^ (string_of_data d)
 | IDiscard -> "discard"
-| IInit (v, d) -> "init " ^ v ^ " = " ^ (string_of_data d)
 | IPushVar v -> "push var " ^ v
 | IAssign s -> "assign " ^ s
 | IBranch (f1, f2) -> "if (" ^ (String.concat "; " (List.map string_of_instruction f1)) ^ ") (" ^ (String.concat "; " (List.map string_of_instruction f2)) ^ ")"
@@ -78,9 +99,8 @@ let rec string_of_instruction = function
 | IDivide -> "divide"
 | ILessThan -> "less than"
 | IGreaterThan -> "greater than"
-  
-let error msg =
-  raise (Machine_error msg)
+
+(* EXECUTION *)
 
 let rec nfold f memo n =
   if n > 0 then nfold f (f memo) (n-1) else memo
@@ -96,11 +116,6 @@ let pop_bool stck =
     (BoolData b, stck') -> (b, stck')
   | _ -> error "invalid stack: expected bool"
 
-let pop_int stck =
-  match pop stck with
-    (IntData i, stck') -> (i, stck')
-  | _ -> error "invalid stack: expected int"
-
 let npop n stck =
   nfold (fun (popped, stck) -> let (d, stck') = pop stck in (d :: popped, stck')) ([], stck) n
 
@@ -108,15 +123,6 @@ let print count stck =
   let (args, stck) = npop count stck in
   print_endline (String.concat " " (List.map string_of_data args));
   stck
-
-let rec lookup envs var =
-  match envs with
-    ((name, d) :: env') :: envs' -> (if name = var then d else lookup (env' :: envs') var)
-  | [] :: envs' -> lookup envs' var
-  | [] -> error ("variable " ^ var ^ " does not exist")
-
-let env_insert var v env = (var, ref v) :: env
-let assign envs var v = (lookup envs var) := v
 
 let inst_context cntxt =
   let inst_type name = function
@@ -126,7 +132,7 @@ let inst_context cntxt =
     | StringType -> StringData ""
     | _ -> error "cannot instantiate that type yet"
   in
-  Context.fold (fun name t env -> env_insert name (inst_type name t) env) cntxt []
+  Context.fold (fun name t env -> Env.add_mem name (ref (inst_type name t)) env) cntxt Env.empty
 
 (* data should already be casted (see compile.ml) *)
 let exec_binop instr stck =
@@ -158,10 +164,12 @@ let exec instr frms stck envs =
          _ :: envs -> (frms, stck, envs)
        | _ -> error "cannot pop environment")
   | IPush d -> (frms, d :: stck, envs)
-  | IPushVar var -> (frms, !(lookup envs var) :: stck, envs)
+  | IPushVar var -> (frms, !(find_mem envs var) :: stck, envs)
   | IDiscard -> let (v, stck) = pop stck in (frms, stck, envs)
-  | IInit (v, d) -> (match envs with env::rest -> (frms, stck, (env_insert v d env) :: rest) | [] -> error "weird environment")
-  | IAssign var -> let (v, stck) = pop stck in assign envs var v; (frms, v :: stck, envs)
+  | IAssign var ->
+      let (v, stck) = pop stck in
+      (match envs with topenv :: _ -> Env.find_mem var topenv := v; (frms, v :: stck, envs)
+                     | _ -> error "expecting an environment")
   | IBranch (f1, f2) ->
       let (cond, stck) = pop_bool stck in
       (match frms with

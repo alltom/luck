@@ -37,6 +37,12 @@ let combine_cntxts overwrite c1 c2 =
   in
   Context.fold add c2 c1
 
+let combine_cntxt_list overwrite lst =
+  List.fold_left
+    (fun c c' -> combine_cntxts overwrite c c')
+    Context.empty
+    lst
+
 (* given a list of, say exprs, extracts context from them all using
    extractf, returning a tuple of the context and the array of extracted
    expressions *)
@@ -232,7 +238,28 @@ let rec compile_stmt parent_cntxt local_cntxt stmt =
         [IPushEnv (combine_cntxts false cond_cntxt body_cntxt)]
           @ ic
           @ (cast tc BoolType)
-          @ [IWhile (ic @ (cast tc BoolType), body_cntxt, body_instrs)]
+          @ [IWhile (body_instrs @ ic @ (cast tc BoolType))]
+          @ [IPopEnv]
+    | For (init, cond, incr, stmts) ->
+        let (init_cntxt, init) = extract_expr_cntxt init in
+        let cntxt = combine_cntxts true cntxt init_cntxt in
+        let (_, init_instrs) = compile_expr cntxt init in
+
+        let (cond_cntxt, cond) = extract_expr_cntxt cond in
+        let cntxt = combine_cntxts false cntxt cond_cntxt in
+        let (cond_type, cond_instrs) = compile_expr cntxt cond in
+
+        let (incr_cntxt, incr) = extract_expr_cntxt incr in
+        let cntxt = combine_cntxts false cntxt incr_cntxt in
+        let (_, incr_instrs) = compile_expr cntxt incr in
+
+        let (body_cntxt, body_instrs) = compile_stmts cntxt stmts in
+
+        [IPushEnv (combine_cntxt_list false [init_cntxt; cond_cntxt; incr_cntxt; body_cntxt])]
+          @ init_instrs @ [IDiscard]
+          @ cond_instrs
+          @ (cast cond_type BoolType)
+          @ [IWhile (body_instrs @ incr_instrs @ [IDiscard] @ cond_instrs @ (cast cond_type BoolType))]
           @ [IPopEnv]
     | Break -> [IBreak]
     | Print args ->

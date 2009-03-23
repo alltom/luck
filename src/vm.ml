@@ -28,7 +28,7 @@ type instruction =
 | IPushVar of string
 | IAssign of string (* puts top stack value in variable with given name; leaves value on stack *)
 | IBranch of instruction list * instruction list (* if true body, if false body *)
-| IWhile of instruction list * (typ Context.t) * instruction list (* condition, body context, body instructions *)
+| IWhile of instruction list (* body instructions *)
 | IBreak (* pops a LoopFrame and an environment *)
 | IPrint of int (* number of things to print (consumes) *)
 | ICast of typ * typ
@@ -89,7 +89,7 @@ let rec string_of_instruction = function
 | IPushVar v -> "push var " ^ v
 | IAssign s -> "assign " ^ s
 | IBranch (f1, f2) -> "if (" ^ (String.concat "; " (List.map string_of_instruction f1)) ^ ") (" ^ (String.concat "; " (List.map string_of_instruction f2)) ^ ")"
-| IWhile (f1, cntxt, f2) -> "while (" ^ (String.concat "; " (List.map string_of_instruction f1)) ^ ") { " ^ (String.concat "; " (List.map string_of_instruction f2)) ^ " }"
+| IWhile body -> "while (...) { " ^ (String.concat "; " (List.map string_of_instruction body)) ^ " }"
 | IBreak -> "break"
 | IPrint i -> "print " ^ (string_of_int i)
 | ICast (t1, t2) -> "cast " ^ (string_of_type t1) ^ " -> " ^ (string_of_type t2)
@@ -172,10 +172,10 @@ let exec instr frms stck envs =
       (match frms with
          (ft, instrs) :: frms -> ((ft, (if cond then f1 else f2) @ instrs) :: frms, stck, envs)
        | _ -> error "in branch, expecting a frame")
-  | IWhile (condframe, body_cntxt, body_frame) -> (* TODO: push body context first time into while *)
+  | IWhile body_frame ->
       let (cond, stck) = pop_bool stck in
       if cond then
-        ((LoopFrame(body_frame @ condframe), body_frame @ condframe) :: frms, stck, envs)
+        ((LoopFrame body_frame, body_frame) :: frms, stck, envs)
       else
         (frms, stck, envs)
   | IBreak ->
@@ -204,6 +204,9 @@ let run instrs env =
           loop ((LoopFrame body, body) :: frms, stck, envs)
         else
           loop (frms, stck, envs)
-    | _ -> error "invalid machine state"
+    | _ -> error ("invalid machine state: "
+                  ^ (string_of_int (List.length frms)) ^ " frames, "
+                  ^ (string_of_int (List.length stck)) ^ " items on stack, "
+                  ^ (string_of_int (List.length envs)) ^ " envs")
   in
   loop ([Frame, instrs], [], [env])

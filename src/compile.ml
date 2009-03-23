@@ -229,7 +229,7 @@ let rec compile_stmt parent_cntxt local_cntxt stmt =
         let cntxt = combine_cntxts true cntxt cond_cntxt in
         let (tc, ic) = compile_expr cntxt cond in
         let (body_cntxt, body_instrs) = compile_stmts cntxt stmts in
-        [IPushEnv cond_cntxt]
+        [IPushEnv (combine_cntxts false cond_cntxt body_cntxt)]
           @ ic
           @ (cast tc BoolType)
           @ [IWhile (ic @ (cast tc BoolType), body_cntxt, body_instrs)]

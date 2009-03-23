@@ -122,6 +122,18 @@ let inst_context cntxt =
   in
   Context.fold (fun name t env -> env_insert name (inst_type name t) env) cntxt []
 
+(* data should already be casted (see compile.ml) *)
+let exec_binop instr stck =
+  let (b, stck) = pop stck in
+  let (a, stck) = pop stck in
+  let result =
+    match instr, a, b with
+      IAdd, IntData a, IntData b -> IntData (a + b)
+    | ILessThan, IntData a, IntData b -> BoolData (a < b)
+    | _, _, _ -> error "cannot execute this binary expression"
+  in
+  result :: stck
+
 let exec instr frms stck envs =
   match instr with
     IPushEnv cntxt -> (frms, stck, (inst_context cntxt) :: envs)
@@ -157,18 +169,7 @@ let exec instr frms stck envs =
          IntData i -> (frms, (BoolData (i != 0)) :: stck, envs)
        | BoolData b -> (frms, v :: stck, envs)
        | _ -> error "cannot convert to bool")
-  | IAdd ->
-      let (b, stck) = pop stck in
-      let (a, stck) = pop stck in
-      (match (a, b) with
-         (IntData a, IntData b) -> (frms, (IntData (a + b)) :: stck, envs)
-       | _ -> error "cannot add these data types")
-  | ILessThan ->
-      let (b, stck) = pop stck in
-      let (a, stck) = pop stck in
-      (match (a, b) with
-         (IntData a, IntData b) -> (frms, (BoolData (a < b)) :: stck, envs)
-       | _ -> error "cannot compare these data types")
+  | IAdd | ILessThan -> (frms, exec_binop instr stck, envs)
 
 let run instrs env =
   let rec loop (frms, stck, envs) =

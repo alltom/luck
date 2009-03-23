@@ -35,6 +35,7 @@ and instruction =
 | IAssign of string (* puts top stack value in variable with given name; leaves value on stack *)
 | IBranch of instruction list * instruction list (* if true body, if false body *)
 | IWhile of instruction list * (typ Context.t) * instruction list (* condition, body context, body instructions *)
+| IBreak (* pops a LoopFrame and an environment *)
 | IPrint of int (* number of things to print (consumes) *)
 | IBoolCast
 | IAdd
@@ -68,6 +69,7 @@ let rec string_of_instruction = function
 | IAssign s -> "assign " ^ s
 | IBranch (f1, f2) -> "if (" ^ (String.concat "; " (List.map string_of_instruction f1)) ^ ") (" ^ (String.concat "; " (List.map string_of_instruction f2)) ^ ")"
 | IWhile (f1, cntxt, f2) -> "while (" ^ (String.concat "; " (List.map string_of_instruction f1)) ^ ") { " ^ (String.concat "; " (List.map string_of_instruction f2)) ^ " }"
+| IBreak -> "break"
 | IPrint i -> "print " ^ (string_of_int i)
 | IBoolCast -> "cast to bool"
 | IAdd -> "add"
@@ -131,13 +133,20 @@ let exec instr frms stck envs =
   | IAssign var -> let (v, stck) = pop stck in assign envs var v; (frms, v :: stck, envs)
   | IBranch (f1, f2) ->
       let (cond, stck) = pop_bool stck in
-      ((Frame, if cond then f1 else f2) :: frms, stck, envs)
+      (match frms with
+         (ft, instrs) :: frms -> ((ft, (if cond then f1 else f2) @ instrs) :: frms, stck, envs)
+       | _ -> error "in branch, expecting a frame")
   | IWhile (condframe, body_cntxt, body_frame) -> (* TODO: push body context first time into while *)
       let (cond, stck) = pop_bool stck in
       if cond then
         ((LoopFrame(body_frame @ condframe), body_frame @ condframe) :: frms, stck, envs)
       else
         (frms, stck, envs)
+  | IBreak ->
+      (match (frms, envs) with
+         ((LoopFrame _, _) :: frms, _ :: envs) -> (frms, stck, envs)
+       | (_ :: frms, _ :: envs) -> error "cannot break out of a non-loop frame"
+       | _ -> error "missing a frame or environment to pop")
   | IPrint count -> (frms, (print count stck), envs)
   | IBoolCast ->
       let (v, stck) = pop stck in

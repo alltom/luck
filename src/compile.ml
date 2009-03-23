@@ -208,6 +208,7 @@ let rec compile_stmt parent_cntxt local_cntxt stmt =
           @ (cast tc BoolType)
           @ [IWhile (ic @ (cast tc BoolType), body_cntxt, body_instrs)]
           @ [IPopEnv]
+    | Break -> [IBreak]
     | Print args ->
         let instrs = List.fold_left (fun instrs e -> let (t, i) = compile_expr cntxt e in instrs @ i) [] args in
         instrs @ [IPrint (List.length args)]

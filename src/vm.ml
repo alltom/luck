@@ -38,7 +38,7 @@ and instruction =
 | IBreak (* pops a LoopFrame and an environment *)
 | IPrint of int (* number of things to print (consumes) *)
 | IBoolCast
-| IAdd
+| IAdd | ISubtract | IMultiply | IDivide
 | ILessThan
 
 and frame_type =
@@ -73,6 +73,9 @@ let rec string_of_instruction = function
 | IPrint i -> "print " ^ (string_of_int i)
 | IBoolCast -> "cast to bool"
 | IAdd -> "add"
+| ISubtract -> "subtract"
+| IMultiply -> "multiply"
+| IDivide -> "divide"
 | ILessThan -> "less than"
   
 let error msg =
@@ -124,11 +127,14 @@ let inst_context cntxt =
 
 (* data should already be casted (see compile.ml) *)
 let exec_binop instr stck =
-  let (b, stck) = pop stck in
+  let (b, stck) = pop stck in (* pop in reverse order! *)
   let (a, stck) = pop stck in
   let result =
     match instr, a, b with
       IAdd, IntData a, IntData b -> IntData (a + b)
+    | ISubtract, IntData a, IntData b -> IntData (a - b)
+    | IMultiply, IntData a, IntData b -> IntData (a * b)
+    | IDivide, IntData a, IntData b -> IntData (a / b)
     | ILessThan, IntData a, IntData b -> BoolData (a < b)
     | _, _, _ -> error "cannot execute this binary expression"
   in
@@ -169,7 +175,7 @@ let exec instr frms stck envs =
          IntData i -> (frms, (BoolData (i != 0)) :: stck, envs)
        | BoolData b -> (frms, v :: stck, envs)
        | _ -> error "cannot convert to bool")
-  | IAdd | ILessThan -> (frms, exec_binop instr stck, envs)
+  | IAdd | ISubtract | IMultiply | IDivide | ILessThan -> (frms, exec_binop instr stck, envs)
 
 let run instrs env =
   let rec loop (frms, stck, envs) =

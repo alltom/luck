@@ -160,6 +160,9 @@ let rec compile_expr cntxt expr =
       let instrs_n_casts t = i1 @ (cast t1 t) @ i2 @ (cast t2 t) in
       (match (op, t1, t2) with
          (Plus, IntType, IntType) -> (IntType, (instrs_n_casts IntType) @ [IAdd])
+       | (Minus, IntType, IntType) -> (IntType, (instrs_n_casts IntType) @ [ISubtract])
+       | (Multiply, IntType, IntType) -> (IntType, (instrs_n_casts IntType) @ [IMultiply])
+       | (Divide, IntType, IntType) -> (IntType, (instrs_n_casts IntType) @ [IDivide])
        | (LessThan, IntType, IntType) -> (BoolType, (instrs_n_casts IntType) @ [ILessThan])
        | _ -> raise (Not_implemented "cannot compile that binary expression")
        )

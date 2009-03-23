@@ -37,9 +37,9 @@ and instruction =
 | IWhile of instruction list * (typ Context.t) * instruction list (* condition, body context, body instructions *)
 | IBreak (* pops a LoopFrame and an environment *)
 | IPrint of int (* number of things to print (consumes) *)
-| IBoolCast
+| ICast of typ * typ
 | IAdd | ISubtract | IMultiply | IDivide
-| ILessThan
+| ILessThan | IGreaterThan
 
 and frame_type =
   Frame
@@ -71,12 +71,13 @@ let rec string_of_instruction = function
 | IWhile (f1, cntxt, f2) -> "while (" ^ (String.concat "; " (List.map string_of_instruction f1)) ^ ") { " ^ (String.concat "; " (List.map string_of_instruction f2)) ^ " }"
 | IBreak -> "break"
 | IPrint i -> "print " ^ (string_of_int i)
-| IBoolCast -> "cast to bool"
+| ICast (t1, t2) -> "cast " ^ (string_of_type t1) ^ " -> " ^ (string_of_type t2)
 | IAdd -> "add"
 | ISubtract -> "subtract"
 | IMultiply -> "multiply"
 | IDivide -> "divide"
 | ILessThan -> "less than"
+| IGreaterThan -> "greater than"
   
 let error msg =
   raise (Machine_error msg)
@@ -87,6 +88,8 @@ let rec nfold f memo n =
 let pop = function
   d :: stck -> (d, stck)
 | _ -> error "stack underflow"
+
+let push d stck = d :: stck
 
 let pop_bool stck =
   match pop stck with
@@ -132,10 +135,17 @@ let exec_binop instr stck =
   let result =
     match instr, a, b with
       IAdd, IntData a, IntData b -> IntData (a + b)
+    | IAdd, FloatData a, FloatData b -> FloatData (a +. b)
     | ISubtract, IntData a, IntData b -> IntData (a - b)
+    | ISubtract, FloatData a, FloatData b -> FloatData (a -. b)
     | IMultiply, IntData a, IntData b -> IntData (a * b)
+    | IMultiply, FloatData a, FloatData b -> FloatData (a *. b)
     | IDivide, IntData a, IntData b -> IntData (a / b)
+    | IDivide, FloatData a, FloatData b -> FloatData (a /. b)
     | ILessThan, IntData a, IntData b -> BoolData (a < b)
+    | ILessThan, FloatData a, FloatData b -> BoolData (a < b)
+    | IGreaterThan, IntData a, IntData b -> BoolData (a > b)
+    | IGreaterThan, FloatData a, FloatData b -> BoolData (a > b)
     | _, _, _ -> error "cannot execute this binary expression"
   in
   result :: stck
@@ -169,13 +179,12 @@ let exec instr frms stck envs =
        | (_ :: frms, _ :: envs) -> error "cannot break out of a non-loop frame"
        | _ -> error "missing a frame or environment to pop")
   | IPrint count -> (frms, (print count stck), envs)
-  | IBoolCast ->
+  | ICast (t1, t2) ->
       let (v, stck) = pop stck in
-      (match v with
-         IntData i -> (frms, (BoolData (i != 0)) :: stck, envs)
-       | BoolData b -> (frms, v :: stck, envs)
-       | _ -> error "cannot convert to bool")
-  | IAdd | ISubtract | IMultiply | IDivide | ILessThan -> (frms, exec_binop instr stck, envs)
+      (match t1, t2, v with
+         IntType, BoolType, IntData i -> (frms, push (BoolData (i != 0)) stck, envs)
+       | _ -> error ("cannot convert " ^ (string_of_type t1) ^ " to " ^ (string_of_type t2)))
+  | IAdd | ISubtract | IMultiply | IDivide | ILessThan | IGreaterThan -> (frms, exec_binop instr stck, envs)
 
 let run instrs env =
   let rec loop (frms, stck, envs) =

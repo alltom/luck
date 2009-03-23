@@ -137,10 +137,15 @@ let cast a b =
     []
   else
     match (a, b) with
-      (IntType, BoolType) -> [IBoolCast]
+      (IntType, FloatType)
+    | (IntType, BoolType)
+    | (FloatType, IntType)
+    | (FloatType, BoolType)
+    | (BoolType, IntType)
+    | (BoolType, FloatType) -> [ICast (a, b)]
     | _ -> error ("cannot convert from " ^ (string_of_type a) ^ " to " ^ (string_of_type b))
 
-(* TODO: add casts *)
+(* TODO: add cast before assignment *)
 (* TODO: check variables for existence *)
 (* when an expression finishes executing, there should be one more value on the stack *)
 let rec compile_expr cntxt expr =
@@ -160,10 +165,29 @@ let rec compile_expr cntxt expr =
       let instrs_n_casts t = i1 @ (cast t1 t) @ i2 @ (cast t2 t) in
       (match (op, t1, t2) with
          (Plus, IntType, IntType) -> (IntType, (instrs_n_casts IntType) @ [IAdd])
+       | (Plus, FloatType, FloatType) -> (FloatType, (instrs_n_casts FloatType) @ [IAdd])
+       | (Plus, IntType, FloatType) -> (FloatType, (instrs_n_casts FloatType) @ [IAdd])
+       | (Plus, FloatType, IntType) -> (FloatType, (instrs_n_casts FloatType) @ [IAdd])
        | (Minus, IntType, IntType) -> (IntType, (instrs_n_casts IntType) @ [ISubtract])
+       | (Minus, FloatType, FloatType) -> (FloatType, (instrs_n_casts FloatType) @ [ISubtract])
+       | (Minus, IntType, FloatType) -> (FloatType, (instrs_n_casts FloatType) @ [ISubtract])
+       | (Minus, FloatType, IntType) -> (FloatType, (instrs_n_casts FloatType) @ [ISubtract])
        | (Multiply, IntType, IntType) -> (IntType, (instrs_n_casts IntType) @ [IMultiply])
+       | (Multiply, FloatType, FloatType) -> (FloatType, (instrs_n_casts FloatType) @ [IMultiply])
+       | (Multiply, IntType, FloatType) -> (FloatType, (instrs_n_casts FloatType) @ [IMultiply])
+       | (Multiply, FloatType, IntType) -> (FloatType, (instrs_n_casts FloatType) @ [IMultiply])
        | (Divide, IntType, IntType) -> (IntType, (instrs_n_casts IntType) @ [IDivide])
+       | (Divide, FloatType, FloatType) -> (FloatType, (instrs_n_casts FloatType) @ [IDivide])
+       | (Divide, IntType, FloatType) -> (FloatType, (instrs_n_casts FloatType) @ [IDivide])
+       | (Divide, FloatType, IntType) -> (FloatType, (instrs_n_casts FloatType) @ [IDivide])
        | (LessThan, IntType, IntType) -> (BoolType, (instrs_n_casts IntType) @ [ILessThan])
+       | (LessThan, FloatType, FloatType) -> (BoolType, (instrs_n_casts FloatType) @ [ILessThan])
+       | (LessThan, IntType, FloatType) -> (BoolType, (instrs_n_casts FloatType) @ [ILessThan])
+       | (LessThan, FloatType, IntType) -> (BoolType, (instrs_n_casts FloatType) @ [ILessThan])
+       | (GreaterThan, IntType, IntType) -> (BoolType, (instrs_n_casts IntType) @ [IGreaterThan])
+       | (GreaterThan, FloatType, FloatType) -> (BoolType, (instrs_n_casts FloatType) @ [IGreaterThan])
+       | (GreaterThan, IntType, FloatType) -> (BoolType, (instrs_n_casts FloatType) @ [IGreaterThan])
+       | (GreaterThan, FloatType, IntType) -> (BoolType, (instrs_n_casts FloatType) @ [IGreaterThan])
        | _ -> raise (Not_implemented "cannot compile that binary expression")
        )
   | Member (e1, mem) -> raise (Not_implemented "cannot compile member expressions")

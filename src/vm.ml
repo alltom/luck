@@ -166,10 +166,7 @@ let exec instr frms stck envs =
   | IPush d -> (frms, d :: stck, envs)
   | IPushVar var -> (frms, !(find_mem envs var) :: stck, envs)
   | IDiscard -> let (v, stck) = pop stck in (frms, stck, envs)
-  | IAssign var ->
-      let (v, stck) = pop stck in
-      (match envs with topenv :: _ -> Env.find_mem var topenv := v; (frms, v :: stck, envs)
-                     | _ -> error "expecting an environment")
+  | IAssign var -> let (v, stck) = pop stck in (find_mem envs var) := v; (frms, v :: stck, envs)
   | IBranch (f1, f2) ->
       let (cond, stck) = pop_bool stck in
       (match frms with

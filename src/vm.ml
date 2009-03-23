@@ -125,7 +125,10 @@ let inst_context cntxt =
 let exec instr frms stck envs =
   match instr with
     IPushEnv cntxt -> (frms, stck, (inst_context cntxt) :: envs)
-  | IPopEnv -> (match envs with _ :: envs -> (frms, stck, envs) | _ -> error "cannot pop environment")
+  | IPopEnv ->
+      (match envs with
+         _ :: envs -> (frms, stck, envs)
+       | _ -> error "cannot pop environment")
   | IPush d -> (frms, d :: stck, envs)
   | IPushVar var -> (frms, !(lookup envs var) :: stck, envs)
   | IDiscard -> let (v, stck) = pop stck in (frms, stck, envs)

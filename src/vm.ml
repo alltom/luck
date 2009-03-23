@@ -33,14 +33,16 @@ and instruction =
 | IInit of string * data
 | IPushVar of string
 | IAssign of string (* puts top stack value in variable with given name; leaves value on stack *)
-| IBranch of frame * frame (* if true body, if false body *)
-| IWhile of frame * (typ Context.t) * frame (* condition, body context, body instructions *)
+| IBranch of instruction list * instruction list (* if true body, if false body *)
+| IWhile of instruction list * (typ Context.t) * instruction list (* condition, body context, body instructions *)
 | IPrint of int (* number of things to print (consumes) *)
 | IBoolCast
 | IAdd
 | ILessThan
 
-and frame = instruction list
+and frame_type =
+  Frame
+| LoopFrame of instruction list (* body of loop *)
 
 and environment = (string * data ref) list
 
@@ -129,13 +131,11 @@ let exec instr frms stck envs =
   | IAssign var -> let (v, stck) = pop stck in assign envs var v; (frms, v :: stck, envs)
   | IBranch (f1, f2) ->
       let (cond, stck) = pop_bool stck in
-      ((if cond then f1 else f2) :: frms, stck, envs)
+      ((Frame, if cond then f1 else f2) :: frms, stck, envs)
   | IWhile (condframe, body_cntxt, body_frame) -> (* TODO: push body context first time into while *)
       let (cond, stck) = pop_bool stck in
       if cond then
-        (match frms with
-           f1 :: rest -> ((body_frame @ condframe) :: (instr :: f1) :: rest, stck, envs)
-         | _ -> error "weird stack: expecting a frame")
+        ((LoopFrame(body_frame @ condframe), body_frame @ condframe) :: frms, stck, envs)
       else
         (frms, stck, envs)
   | IPrint count -> (frms, (print count stck), envs)
@@ -158,13 +158,19 @@ let exec instr frms stck envs =
          (IntData a, IntData b) -> (frms, (BoolData (a < b)) :: stck, envs)
        | _ -> error "cannot compare these data types")
 
-let run frm env =
+let run instrs env =
   let rec loop (frms, stck, envs) =
     match (frms, stck, envs) with
       ([], [v], _) -> Some v
     | ([], [], _) -> None
-    | ((i::is) :: frms, stck, envs) -> loop (exec i (is::frms) stck envs)
-    | ([] :: frms, stck, envs) -> loop (frms, stck, envs)
+    | ((ft, i::is) :: frms, stck, envs) -> loop (exec i ((ft, is)::frms) stck envs)
+    | ((Frame, []) :: frms, stck, envs) -> loop (frms, stck, envs)
+    | ((LoopFrame body, []) :: frms, stck, envs) ->
+        let (cond, stck) = pop_bool stck in
+        if cond then
+          loop ((LoopFrame body, body) :: frms, stck, envs)
+        else
+          loop (frms, stck, envs)
     | _ -> error "invalid machine state"
   in
-  loop ([frm], [], [env])
+  loop ([Frame, instrs], [], [env])

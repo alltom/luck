@@ -36,10 +36,10 @@ rule token = parse
 | "if"                     { IF }
 | "else"                   { ELSE }
 | "for"                    { FOR }
-| "-"? "." digit+
-| "-"? digit+ "." digit* as num { FLOAT (float_of_string num) }
+| "." digit+
+| digit+ "." digit* as num { FLOAT (float_of_string num) }
 | "0x" hexdigit+ as num       { INT (int_of_string num) }
-| "-"? digit+ as num            { INT (int_of_string num) }
+| digit+ as num            { INT (int_of_string num) }
 | ident as name            { ID(name) }
 | "-=>"                    { MINUSCHUCK }
 | "+=>"                    { PLUSCHUCK }

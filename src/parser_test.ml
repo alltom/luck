@@ -11,7 +11,7 @@ let num_failed = ref 0
 (* assert_tree *)
 let t str fns classes stmts =
   num_tests := !num_tests + 1;
-  (if (try (make_tree str) = AST(fns, classes, stmts) with Parsing.Parse_error -> false) then
+  (if (try (make_tree str) = (fns, classes, stmts) with Parsing.Parse_error -> false) then
      print_endline ("passed: " ^ str)
    else
      (num_failed := !num_failed + 1;
@@ -65,8 +65,8 @@ let _ =
   (* fair-weather expressions *)
   t "4;" [] [] [es (Int 4)];
   t "4.;" [] [] [es (Float 4.)];
-  t "-4;" [] [] [es (Int (-4))];
-  t "-4.;" [] [] [es (Float (-4.))];
+  t "-4;" [] [] [es (UnaryExpr(ArithNegation, Int 4))];
+  t "-4.;" [] [] [es (UnaryExpr(ArithNegation, Float 4.))];
   t "true;" [] [] [es (Bool true)];
   t "false;" [] [] [es (Bool false)];
   t "a;" [] [] [es a];
@@ -179,7 +179,11 @@ let _ =
   t "b * c + a;" [] [] [es (BinaryExpr(Plus, BinaryExpr(Multiply, b, c), a))];
   t "a.b();" [] [] [es (FunCall(Member(a, "b"), []))];
   t "-a();" [] [] [es (UnaryExpr(ArithNegation, FunCall(a, [])))];
-  t " <<< int a, b >>>;" [] [] [Print [Declaration([("a", Type("int", false, false, [])); ("b", Type("int", false, false, []))])]];
-  t " <<< (int a), b, 3 >>>;" [] [] [Print [Declaration([("a", Type("int", false, false, []))]); Var "b"; Int 3]];
+  t "<<< int a, b >>>;" [] [] [Print [Declaration([("a", Type("int", false, false, [])); ("b", Type("int", false, false, []))])]];
+  t "<<< (int a), b, 3 >>>;" [] [] [Print [Declaration([("a", Type("int", false, false, []))]); Var "b"; Int 3]];
+  t "<<< a+3, a+2 >>>;" [] [] [Print [BinaryExpr(Plus, a, Int 3); BinaryExpr(Plus, a, Int 2)]];
+  t "<<< \"Hi\" >>>;" [] [] [Print [String "Hi"]];
+  t "<<< \"Hi\", \"you\" >>>;" [] [] [Print [String "Hi"; String "you"]];
+  t "0, 2-1;" [] [] [es (Comma [Int 0; BinaryExpr(Minus, Int 2, Int 1)])];
 
   print_endline ("failed " ^ (string_of_int !num_failed) ^ " of " ^ (string_of_int !num_tests))

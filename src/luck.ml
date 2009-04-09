@@ -3,7 +3,15 @@ open Ast
 open Compile
 open Vm
 
+let arg_print_instrs = ref false
+let usage = "usage: " ^ Sys.argv.(0) ^ " [-i]"
+
+let speclist = [
+  ("-i", Arg.Unit (fun () -> arg_print_instrs := true), ": print instructions before execution");
+]
+
 let main () =
+  Arg.parse speclist (fun x -> raise (Arg.Bad ("Bad argument : " ^ x))) usage;
   let tree =
     try Parser.input Lexer.token (Lexing.from_channel stdin)
     with Parsing.Parse_error -> exit 1
@@ -16,8 +24,10 @@ let main () =
     | Redeclaration -> prerr_endline "variable redeclaration"; exit 1
     | Undeclared_variable v -> prerr_endline ("using variable " ^ v ^ " without declaring it"); exit 1
   in
-  List.iter (fun i -> print_endline ("\t" ^ (string_of_instruction i))) instrs;
-  print_endline "---";
+  if !arg_print_instrs then
+    (List.iter (fun i -> print_endline ("\t" ^ (string_of_instruction i))) instrs;
+    print_endline "---")
+  else ();
   run (instantiate_shred Env.empty (cntxt, funcs, instrs))
 
 let _ = main ()

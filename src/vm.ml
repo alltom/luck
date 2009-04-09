@@ -169,18 +169,18 @@ let exec_binop instr stck =
   let (a, stck) = pop stck in
   let result =
     match instr, a, b with
-      IAdd, IntData a, IntData b -> IntData (a + b)
-    | IAdd, FloatData a, FloatData b -> FloatData (a +. b)
-    | ISubtract, IntData a, IntData b -> IntData (a - b)
-    | ISubtract, FloatData a, FloatData b -> FloatData (a -. b)
-    | IMultiply, IntData a, IntData b -> IntData (a * b)
-    | IMultiply, FloatData a, FloatData b -> FloatData (a *. b)
-    | IDivide, IntData a, IntData b -> IntData (a / b)
-    | IDivide, FloatData a, FloatData b -> FloatData (a /. b)
-    | ILessThan, IntData a, IntData b -> BoolData (a < b)
-    | ILessThan, FloatData a, FloatData b -> BoolData (a < b)
-    | IGreaterThan, IntData a, IntData b -> BoolData (a > b)
-    | IGreaterThan, FloatData a, FloatData b -> BoolData (a > b)
+      IAdd,         IntData a,   IntData b   -> IntData   (a + b)
+    | IAdd,         FloatData a, FloatData b -> FloatData (a +. b)
+    | ISubtract,    IntData a,   IntData b   -> IntData   (a - b)
+    | ISubtract,    FloatData a, FloatData b -> FloatData (a -. b)
+    | IMultiply,    IntData a,   IntData b   -> IntData   (a * b)
+    | IMultiply,    FloatData a, FloatData b -> FloatData (a *. b)
+    | IDivide,      IntData a,   IntData b   -> IntData   (a / b)
+    | IDivide,      FloatData a, FloatData b -> FloatData (a /. b)
+    | ILessThan,    IntData a,   IntData b   -> BoolData  (a < b)
+    | ILessThan,    FloatData a, FloatData b -> BoolData  (a < b)
+    | IGreaterThan, IntData a,   IntData b   -> BoolData  (a > b)
+    | IGreaterThan, FloatData a, FloatData b -> BoolData  (a > b)
     | _, _, _ -> error "cannot execute this binary expression"
   in
   result :: stck

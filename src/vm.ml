@@ -36,6 +36,7 @@ type instruction =
 | IAdd | ISubtract | IMultiply | IDivide
 | ILessThan | IGreaterThan
 
+type time = float
 type func = typ * typ list * instruction list
 type shred_template = context * func list * instruction list
 
@@ -59,6 +60,19 @@ type frame = frame_type * instruction list
 type env_stack = (Env.environment list) list
 type stack = data list
 type execution_state = frame list * stack * env_stack
+
+module Shred =
+  struct
+    type shred = time * execution_state
+    let new_shred now state : shred = (now, state)
+    let now shred = let (now, _) = shred in now
+    let state shred = let (_, state) = shred in state
+  end
+
+module VM =
+  struct
+    type vm = Shred.shred Priority_queue.queue
+  end
 
 (* STRING CONVERSIONS *)
 

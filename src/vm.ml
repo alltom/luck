@@ -40,7 +40,7 @@ type instruction =
 type frame_type = Frame | LoopFrame of instruction list (* body of loop *)
 
 (* an execution environment; all the variables and functions are stored here *)
-(* TODO: when classes are implemented, functions may split into their own container *)
+(* TODO: classes *)
 module Env =
   struct
     module StringMap = Map.Make(String)
@@ -54,10 +54,13 @@ module Env =
     let find_mem name = function _, mems -> StringMap.find name mems
   end
 
-let rec find_mem envs var =
-  match envs with
-    env :: rest -> (try Env.find_mem var env with Not_found -> find_mem rest var)
-  | [] -> error ("variable " ^ var ^ " does not exist")
+type time = float
+
+module Shred =
+  struct
+    type frame = frame_type * instruction list
+    type shred = time * frame list * data list * Env.environment list
+  end
 
 (* STRING CONVERSIONS *)
 
@@ -124,6 +127,13 @@ let print count stck =
   print_endline (String.concat " " (List.map string_of_data args));
   stck
 
+(* searches an environment stack for a variable *)
+let rec find_mem envs var =
+  match envs with
+    env :: rest -> (try Env.find_mem var env with Not_found -> find_mem rest var)
+  | [] -> error ("variable " ^ var ^ " does not exist")
+
+(* instantiates an environment with variables from a context *)
 let inst_context cntxt =
   let inst_type name = function
       IntType -> IntData 0
@@ -134,7 +144,7 @@ let inst_context cntxt =
   in
   Context.fold (fun name t env -> Env.add_mem name (ref (inst_type name t)) env) cntxt Env.empty
 
-(* data should already be casted (see compile.ml) *)
+(* data should already be casted so types match (see compile.ml) *)
 let exec_binop instr stck =
   let (b, stck) = pop stck in (* pop in reverse order! *)
   let (a, stck) = pop stck in
@@ -156,6 +166,7 @@ let exec_binop instr stck =
   in
   result :: stck
 
+(* executes a single instruction *)
 let exec instr frms stck envs =
   match instr with
     IPushEnv cntxt -> (frms, stck, (inst_context cntxt) :: envs)
@@ -191,6 +202,7 @@ let exec instr frms stck envs =
        | _ -> error ("cannot convert " ^ (string_of_type t1) ^ " to " ^ (string_of_type t2)))
   | IAdd | ISubtract | IMultiply | IDivide | ILessThan | IGreaterThan -> (frms, exec_binop instr stck, envs)
 
+(* executes instructions in the given environment until it yields or finishes *)
 let run instrs env =
   let rec loop (frms, stck, envs) =
     match (frms, stck, envs) with

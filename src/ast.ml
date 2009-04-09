@@ -67,7 +67,7 @@ type
   (* public? * name * extended classes * functions * body statements *)
   clas = Class of bool * string * string list * func list * stmt list and
 
-  ast = AST of func list * clas list * stmt list
+  ast = func list * clas list * stmt list
 
 let string_of_type (Type(name, reference, static, arrdep)) =
   (if static then "static " else "")
@@ -110,7 +110,7 @@ let rec string_of_stmt stmt =
   | If (e, then_stmts, else_stmts) -> "if(.){.}else{.}"
   | For (e1, e2, e3, stmts) -> "for(.;.;.){.}"
 
-let ast_summary (AST(fns, classes, stmts)) =
+let ast_summary (fns, classes, stmts) =
   let ip pref str = print_endline (pref ^ str) in
   let function_summary pref (Function(typ, name, decl, stmts)) =
     let p = ip pref in

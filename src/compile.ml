@@ -279,5 +279,6 @@ compile_stmts parent_cntxt stmts =
   (!local_cntxt, List.fold_left compile_stmt [] stmts)
 
 (* returns a pair: context of stmts * instructions of stmts *)
-let compile (AST(fns, classes, stmts)) =
-  compile_stmts Context.empty stmts
+let compile cntxt (fns, classes, stmts) : shred_template =
+  let cntxt, instrs = compile_stmts Context.empty stmts in
+  (cntxt, [], instrs)

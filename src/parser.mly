@@ -65,10 +65,10 @@ input:
 ;
 
 units:
-/* empty */ { AST([], [], []) }
-| units statement { match $1 with AST(f, c, s) -> AST(f, c, s @ [$2]) }
-| units func { match $1 with AST(f, c, s) -> AST(f @ [$2], c, s) }
-| units clas { match $1 with AST(f, c, s) -> AST(f, c @ [$2], s) }
+/* empty */ { ([], [], []) }
+| units statement { match $1 with (f, c, s) -> (f, c, s @ [$2]) }
+| units func { match $1 with (f, c, s) -> (f @ [$2], c, s) }
+| units clas { match $1 with (f, c, s) -> (f, c @ [$2], s) }
 ;
 
 statements:

@@ -20,9 +20,10 @@ type data =
 (* map from string names to data types;
    used as template for creating environments *)
 module Context = Map.Make(String)
+type context = typ Context.t
 
 type instruction =
-  IPushEnv of (typ Context.t) | IPopEnv
+  IPushEnv of context | IPopEnv
 | IPush of data
 | IDiscard
 | IPushVar of string
@@ -35,16 +36,13 @@ type instruction =
 | IAdd | ISubtract | IMultiply | IDivide
 | ILessThan | IGreaterThan
 
-(* instruction lists are popped and pushed in blocks called frames
-   as functions are called, loops entered, etc *)
-type frame_type = Frame | LoopFrame of instruction list (* body of loop *)
+type func = typ * typ list * instruction list
+type shred_template = context * func list * instruction list
 
-(* an execution environment; all the variables and functions are stored here *)
 (* TODO: classes *)
 module Env =
   struct
     module StringMap = Map.Make(String)
-    type func = typ * typ list * instruction list
     type member = data ref
     type environment = func StringMap.t * member StringMap.t
     let empty : environment = StringMap.empty, StringMap.empty
@@ -54,13 +52,13 @@ module Env =
     let find_mem name = function _, mems -> StringMap.find name mems
   end
 
-type time = float
-
-module Shred =
-  struct
-    type frame = frame_type * instruction list
-    type shred = time * frame list * data list * Env.environment list
-  end
+(* instruction lists are popped and pushed in blocks called frames
+   as functions are called, loops entered, etc *)
+type frame_type = Frame | LoopFrame of instruction list (* body of loop *)
+type frame = frame_type * instruction list
+type env_stack = (Env.environment list) list
+type stack = data list
+type execution_state = frame list * stack * env_stack
 
 (* STRING CONVERSIONS *)
 
@@ -103,25 +101,41 @@ let rec string_of_instruction = function
 | ILessThan -> "less than"
 | IGreaterThan -> "greater than"
 
-(* EXECUTION *)
+(* UTILITY *)
 
+(* fold, but with an int instead of a list *)
 let rec nfold f memo n =
   if n > 0 then nfold f (f memo) (n-1) else memo
 
+(* pops one item from a stack, returning the item and the stack *)
 let pop = function
   d :: stck -> (d, stck)
 | _ -> error "stack underflow"
 
+(* pushes an item onto a stack *)
 let push d stck = d :: stck
 
+(* pops an item, checking that it's a bool *)
 let pop_bool stck =
   match pop stck with
     (BoolData b, stck') -> (b, stck')
   | _ -> error "invalid stack: expected bool"
 
+(* pops n items off the stack *)
 let npop n stck =
   nfold (fun (popped, stck) -> let (d, stck') = pop stck in (d :: popped, stck')) ([], stck) n
 
+let push_env env = function
+  envs :: rest -> (env :: envs) :: rest
+| [] -> [[env]]
+
+let first_env_list = function
+  envs :: rest -> envs
+| [] -> error "expected an environment"
+
+(* EXECUTION *)
+
+(* prints count items from the stack, popping them *)
 let print count stck =
   let (args, stck) = npop count stck in
   print_endline (String.concat " " (List.map string_of_data args));
@@ -140,9 +154,14 @@ let inst_context cntxt =
     | FloatType -> FloatData 0.0
     | BoolType -> BoolData false
     | StringType -> StringData ""
-    | _ -> error "cannot instantiate that type yet"
+    | t -> error ("cannot instantiate type " ^ (string_of_type t))
   in
   Context.fold (fun name t env -> Env.add_mem name (ref (inst_type name t)) env) cntxt Env.empty
+
+(* TODO: global env *)
+let instantiate_shred env (shred_templ : shred_template) : execution_state =
+  let cntxt, funcs, instrs = shred_templ in
+  ([(Frame, instrs)], [], [(inst_context cntxt) :: [env]])
 
 (* data should already be casted so types match (see compile.ml) *)
 let exec_binop instr stck =
@@ -167,17 +186,17 @@ let exec_binop instr stck =
   result :: stck
 
 (* executes a single instruction *)
-let exec instr frms stck envs =
+let exec instr (frms : frame list) (stck : stack) (envs : env_stack) =
   match instr with
-    IPushEnv cntxt -> (frms, stck, (inst_context cntxt) :: envs)
+    IPushEnv cntxt -> (frms, stck, push_env (inst_context cntxt) envs)
   | IPopEnv ->
       (match envs with
          _ :: envs -> (frms, stck, envs)
        | _ -> error "cannot pop environment")
   | IPush d -> (frms, d :: stck, envs)
-  | IPushVar var -> (frms, !(find_mem envs var) :: stck, envs)
+  | IPushVar var -> (frms, !(find_mem (first_env_list envs) var) :: stck, envs)
   | IDiscard -> let (v, stck) = pop stck in (frms, stck, envs)
-  | IAssign var -> let (v, stck) = pop stck in (find_mem envs var) := v; (frms, v :: stck, envs)
+  | IAssign var -> let (v, stck) = pop stck in (find_mem (first_env_list envs) var) := v; (frms, v :: stck, envs)
   | IBranch (f1, f2) ->
       let (cond, stck) = pop_bool stck in
       (match frms with
@@ -202,23 +221,19 @@ let exec instr frms stck envs =
        | _ -> error ("cannot convert " ^ (string_of_type t1) ^ " to " ^ (string_of_type t2)))
   | IAdd | ISubtract | IMultiply | IDivide | ILessThan | IGreaterThan -> (frms, exec_binop instr stck, envs)
 
-(* executes instructions in the given environment until it yields or finishes *)
-let run instrs env =
-  let rec loop (frms, stck, envs) =
-    match (frms, stck, envs) with
-      ([], [v], _) -> Some v
-    | ([], [], _) -> None
-    | ((ft, i::is) :: frms, stck, envs) -> loop (exec i ((ft, is)::frms) stck envs)
-    | ((Frame, []) :: frms, stck, envs) -> loop (frms, stck, envs)
-    | ((LoopFrame body, []) :: frms, stck, envs) ->
-        let (cond, stck) = pop_bool stck in
-        if cond then
-          loop ((LoopFrame body, body) :: frms, stck, envs)
-        else
-          loop (frms, stck, envs)
-    | _ -> error ("invalid machine state: "
-                  ^ (string_of_int (List.length frms)) ^ " frames, "
-                  ^ (string_of_int (List.length stck)) ^ " items on stack, "
-                  ^ (string_of_int (List.length envs)) ^ " envs")
-  in
-  loop ([Frame, instrs], [], [env])
+(* executes instructions in the given environments until it yields or finishes *)
+let rec run (state : execution_state) =
+  match state with
+    ([], [], _) -> ()
+  | ((ft, i::is) :: frms, stck, envs) -> run (exec i ((ft, is)::frms) stck envs)
+  | ((Frame, []) :: frms, stck, envs) -> run (frms, stck, envs)
+  | ((LoopFrame body, []) :: frms, stck, envs) ->
+      let (cond, stck) = pop_bool stck in
+      if cond then
+        run ((LoopFrame body, body) :: frms, stck, envs)
+      else
+        run (frms, stck, envs)
+  | (frms, stck, envs) -> error ("invalid machine state: "
+                                 ^ (string_of_int (List.length frms)) ^ " frames, "
+                                 ^ (string_of_int (List.length stck)) ^ " items on stack, "
+                                 ^ (string_of_int (List.length envs)) ^ " envs")

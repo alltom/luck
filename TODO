@@ -1,2 +1,5 @@
 functions
 classes/objects
+
+code cleanliness:
+- interface files to only expose lets/modules usable from outside

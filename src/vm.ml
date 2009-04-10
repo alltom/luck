@@ -64,14 +64,9 @@ type execution_state = frame list * stack * env_stack
 module Shred =
   struct
     type shred = time * execution_state
-    let new_shred now state : shred = (now, state)
+    let shred now state = (now, state)
     let now shred = let (now, _) = shred in now
     let state shred = let (_, state) = shred in state
-  end
-
-module VM =
-  struct
-    type vm = Shred.shred Priority_queue.queue
   end
 
 (* STRING CONVERSIONS *)
@@ -148,6 +143,8 @@ let first_env_list = function
 | [] -> error "expected an environment"
 
 (* EXECUTION *)
+
+let finished = function ([], [], _) -> true | _ -> false
 
 (* prints count items from the stack, popping them *)
 let print count stck =
@@ -236,18 +233,37 @@ let exec instr (frms : frame list) (stck : stack) (envs : env_stack) =
   | IAdd | ISubtract | IMultiply | IDivide | ILessThan | IGreaterThan -> (frms, exec_binop instr stck, envs)
 
 (* executes instructions in the given environments until it yields or finishes *)
-let rec run (state : execution_state) =
+(* returns the number of samples yielded and the new execution state *)
+let rec run_til_yield (state : execution_state) =
   match state with
-    ([], [], _) -> ()
-  | ((ft, i::is) :: frms, stck, envs) -> run (exec i ((ft, is)::frms) stck envs)
-  | ((Frame, []) :: frms, stck, envs) -> run (frms, stck, envs)
+    ([], [], _) -> None
+  | ((ft, i::is) :: frms, stck, envs) -> run_til_yield (exec i ((ft, is)::frms) stck envs)
+  | ((Frame, []) :: frms, stck, envs) -> run_til_yield (frms, stck, envs)
   | ((LoopFrame body, []) :: frms, stck, envs) ->
       let (cond, stck) = pop_bool stck in
       if cond then
-        run ((LoopFrame body, body) :: frms, stck, envs)
+        run_til_yield ((LoopFrame body, body) :: frms, stck, envs)
       else
-        run (frms, stck, envs)
+        run_til_yield (frms, stck, envs)
   | (frms, stck, envs) -> error ("invalid machine state: "
                                  ^ (string_of_int (List.length frms)) ^ " frames, "
                                  ^ (string_of_int (List.length stck)) ^ " items on stack, "
                                  ^ (string_of_int (List.length envs)) ^ " envs")
+
+(* maintains a sense of "now" given a set of shreds *)
+(* TODO: instead of putting a shred back in the queue, run it
+         repeatedly until it is no longer the furthest behind *)
+module VM =
+  struct
+    type vm = time * Shred.shred Priority_queue.queue
+    let empty now = (now, Priority_queue.empty)
+    let add vm shred = Priority_queue.insert vm (Shred.now shred) shred
+    let next_shred vm = let _, shred, queue = Priority_queue.extract vm in (shred, queue)
+    let rec run samples vm =
+      let shred, vm = next_shred vm in
+      match run_til_yield (Shred.state shred) with
+        None -> run samples vm
+      | Some(elapsed, state) ->
+          let vm = add vm (Shred.shred ((Shred.now shred) +. elapsed) state) in
+          if elapsed > samples then vm else run (samples -. elapsed) vm
+  end

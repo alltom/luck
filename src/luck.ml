@@ -28,6 +28,6 @@ let main () =
     (List.iter (fun i -> print_endline ("\t" ^ (string_of_instruction i))) instrs;
     print_endline "---")
   else ();
-  run (instantiate_shred Env.empty (cntxt, funcs, instrs))
+  run_til_yield (instantiate_shred Env.empty (cntxt, funcs, instrs))
 
 let _ = main ()

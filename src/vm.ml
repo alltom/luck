@@ -8,7 +8,7 @@ type time = float (* duration or time in samples *)
 type typ =
   ArrayType of array_dimension * typ
 | RefType of typ
-| IntType | FloatType | BoolType | StringType
+| IntType | FloatType | BoolType | StringType | DurType
 and array_dimension = Dynamic | Static of int
 
 type data =
@@ -18,11 +18,23 @@ type data =
 | BoolData of bool
 | FloatData of float
 | StringData of string
+| DurData of float
 
 (* map from string names to data types;
    used as template for creating environments *)
 module Context = Map.Make(String)
 type context = typ Context.t
+let builtin_variables = [("samp", DurType)]
+let builtin_type name =
+  let _, t = List.find (fun (name', t) -> name = name') builtin_variables in
+  t
+let builtin_cntxt =
+  List.fold_left
+    (fun cntxt (name, t) -> Context.add name t cntxt)
+    Context.empty
+    builtin_variables
+let is_builtin name =
+  List.exists (fun (name', _) -> name' = name) builtin_variables
 
 type instruction =
   IPushEnv of context | IPopEnv
@@ -81,6 +93,7 @@ let rec string_of_type t =
   | BoolType -> "bool"
   | FloatType -> "float"
   | StringType -> "string"
+  | DurType -> "dur"
 
 let strings_of_cntxt cntxt =
   Context.fold (fun name (t, d) lst -> ((string_of_type t) ^ " " ^ name) :: lst) cntxt []
@@ -92,6 +105,7 @@ let string_of_data = function
 | BoolData b -> string_of_bool b
 | FloatData f -> string_of_float f
 | StringData s -> s
+| DurData s -> (string_of_float s) ^ "::samp"
 
 let rec string_of_instruction = function
   IPushEnv cntxt -> "push env"
@@ -156,10 +170,16 @@ let print count stck =
   stck
 
 (* searches an environment stack for a variable *)
+(* TODO: this should be moved to VM for builtins like "now" and "second" *)
 let rec find_mem envs var =
-  match envs with
-    env :: rest -> (try Env.find_mem var env with Not_found -> find_mem rest var)
-  | [] -> error ("variable " ^ var ^ " does not exist")
+  if is_builtin var then
+    match var with
+      "samp" -> ref (DurData 1.0)
+    | _ -> error ("builtin " ^ var ^ " not yet implemented")
+  else
+    match envs with
+      env :: rest -> (try Env.find_mem var env with Not_found -> find_mem rest var)
+    | [] -> error ("variable " ^ var ^ " does not exist")
 
 (* instantiates an environment with variables from a context *)
 let inst_context cntxt =
@@ -168,6 +188,7 @@ let inst_context cntxt =
     | FloatType -> FloatData 0.0
     | BoolType -> BoolData false
     | StringType -> StringData ""
+    | DurType -> DurData 0.0
     | t -> error ("cannot instantiate type " ^ (string_of_type t))
   in
   Context.fold (fun name t env -> Env.add_mem name (ref (inst_type name t)) env) cntxt Env.empty
@@ -189,6 +210,8 @@ let exec_binop instr stck =
     | ISubtract,    FloatData a, FloatData b -> FloatData (a -. b)
     | IMultiply,    IntData a,   IntData b   -> IntData   (a * b)
     | IMultiply,    FloatData a, FloatData b -> FloatData (a *. b)
+    | IMultiply,    IntData a,   DurData b   -> DurData   ((float_of_int a) *. b)
+    | IMultiply,    FloatData a, DurData b   -> DurData   (a *. b)
     | IDivide,      IntData a,   IntData b   -> IntData   (a / b)
     | IDivide,      FloatData a, FloatData b -> FloatData (a /. b)
     | ILessThan,    IntData a,   IntData b   -> BoolData  (a < b)
@@ -260,7 +283,7 @@ let rec run_til_yield (state : execution_state) =
          repeatedly until it is no longer the furthest behind *)
 module VM =
   struct
-    type vm = time * Shred.shred Priority_queue.queue
+    type vm = time * Shred.shred Priority_queue.queue (* now, shreds *)
     let empty now = (now, Priority_queue.empty)
     let add vm shred = Priority_queue.insert vm (Shred.now shred) shred
     let next_shred vm = let _, shred, queue = Priority_queue.extract vm in (shred, queue)

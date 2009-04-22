@@ -19,10 +19,9 @@ let main () =
   let (cntxt, funcs, instrs) =
     try compile Context.empty tree
     with
-      Compiler_error msg -> prerr_endline ("compiler error: " ^ msg); exit 1
+      Compile_error msg -> prerr_endline ("compile error: " ^ msg); exit 1
+    | Compiler_error msg -> prerr_endline ("compiler error: " ^ msg); exit 1
     | Not_implemented msg -> prerr_endline ("not implemented: " ^ msg); exit 1
-    | Redeclaration -> prerr_endline "variable redeclaration"; exit 1
-    | Undeclared_variable v -> prerr_endline ("using variable " ^ v ^ " without declaring it"); exit 1
   in
   if !arg_print_instrs then
     (List.iter (fun i -> print_endline ("\t" ^ (string_of_instruction i))) instrs;

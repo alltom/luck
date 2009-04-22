@@ -2,12 +2,9 @@
 open Ast
 open Vm
 
-exception Compile_error
-
+exception Compile_error of string (* something is wrong with the input *)
 exception Compiler_error of string (* something went wrong internally *)
 exception Not_implemented of string
-exception Redeclaration
-exception Undeclared_variable of string (* name of undeclared variable *)
 exception Type_mismatch of string
 
 let rec typ_of_asttype asttype =
@@ -15,13 +12,21 @@ let rec typ_of_asttype asttype =
     Type("int", false, _, []) -> IntType
   | Type("float", false, _, []) -> FloatType
   | Type("string", false, _, []) -> StringType
+  | Type("dur", false, _, []) -> DurType
   | _ -> raise (Not_implemented "cannot yet convert this data type")
+
+(* raises an compile exception if the given variable name is reserved (ex: now, second, ...) *)
+let raise_if_reserved name =
+  if is_builtin name then
+    raise (Compile_error ("redeclaration of reserved variable " ^ name))
+  else
+    name
 
 (* returns a context from a list of declarations *)
 let rec build_context decls =
   let rec loop cntxt decls =
     match decls with
-      (name, t) :: rest -> loop (Context.add name (typ_of_asttype t) cntxt) rest
+      (name, t) :: rest -> loop (Context.add (raise_if_reserved name) (typ_of_asttype t) cntxt) rest
     | [] -> cntxt
   in loop Context.empty decls
 
@@ -31,7 +36,7 @@ let rec build_context decls =
 let combine_cntxts overwrite c1 c2 =
   let add name entry c' =
     if not overwrite && (Context.mem name c') then
-      raise Redeclaration
+      raise (Compile_error ("redeclaration of " ^ name))
     else
       Context.add name entry c'
   in
@@ -136,6 +141,7 @@ let rec get_type d =
   | BoolData _ -> BoolType
   | FloatData _ -> FloatType
   | StringData _ -> StringType
+  | DurData _ -> DurType
 
 let cast a b =
   if a = b then
@@ -159,7 +165,12 @@ let rec compile_expr cntxt expr =
   | Float f -> FloatType, [IPush (FloatData f)]
   | Bool b -> BoolType, [IPush (BoolData b)]
   | String s -> StringType, [IPush (StringData s)]
-  | Var name -> (try Context.find name cntxt with Not_found -> raise (Undeclared_variable name)), [IPushVar name]
+  | Var name ->
+      if is_builtin name then
+        (builtin_type name, [IPushVar name])
+      else
+        let t = (try Context.find name cntxt with Not_found -> raise (Compile_error ("variable " ^ name ^ " undeclared"))) in
+        (t, [IPushVar name])
   | Array exprs -> raise (Not_implemented "cannot compile array expressions")
   | Comma exprs -> List.fold_left (fun (t, instrs) e -> let (t, i) = compile_expr cntxt e in (t, instrs @ [IDiscard] @ i)) (BoolType, [IPush (BoolData false)]) exprs (* TODO: doity *)
   | UnaryExpr (op, e1) -> raise (Not_implemented "cannot compile unary expressions")
@@ -206,7 +217,13 @@ let rec compile_expr cntxt expr =
       let return_type = promote_type t1 t2 in
       (return_type, ic @ (cast tc BoolType) @ [IBranch (i1 @ (cast t1 return_type), i2 @ (cast t2 return_type))])
   | Subscript (e1, e2) -> raise (Not_implemented "cannot compile subscription")
-  | Time (e1, e2) -> raise (Not_implemented "cannot compile time expressions")
+  | Time (e1, e2) ->
+      let (t1, i1) = compile_expr cntxt e1 in
+      let (t2, i2) = compile_expr cntxt e2 in
+      (match t1, t2 with
+         (IntType, DurType) -> DurType, i1 @ i2 @ [IMultiply]
+       | (FloatType, DurType) -> DurType, i1 @ i2 @ [IMultiply]
+       | _ -> raise (Compile_error ("invalid time expression: " ^ (string_of_type t1) ^ "::" ^ (string_of_type t2))))
   | Declaration decls -> raise (Compiler_error "declaration wasn't extracted earlier")
 
 (* when a statement finishes executing, the stack should be how it was before *)

@@ -12,10 +12,10 @@ type
   decl = vardecl list and
   
   unary_op =
-    ArithNegation
-  | Negation
-  | PreInc | PostInc
-  | PreDec | PostDec
+    ArithNegation (* -x *)
+  | Negation (* !x *)
+  | PreInc | PostInc (* ++x and x++ *)
+  | PreDec | PostDec (* --x and x-- *)
   and
   
   binary_op =

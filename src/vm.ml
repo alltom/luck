@@ -3,6 +3,8 @@ exception Machine_error of string
 let error msg =
   raise (Machine_error msg)
 
+type time = float (* duration or time in samples *)
+
 type typ =
   ArrayType of array_dimension * typ
 | RefType of typ
@@ -35,8 +37,8 @@ type instruction =
 | ICast of typ * typ
 | IAdd | ISubtract | IMultiply | IDivide
 | ILessThan | IGreaterThan
+| IYield of time
 
-type time = float
 type func = typ * typ list * instruction list
 type shred_template = context * func list * instruction list
 
@@ -109,6 +111,7 @@ let rec string_of_instruction = function
 | IDivide -> "divide"
 | ILessThan -> "less than"
 | IGreaterThan -> "greater than"
+| IYield dur -> "yield(" ^ (string_of_float dur) ^ ")"
 
 (* UTILITY *)
 
@@ -231,12 +234,14 @@ let exec instr (frms : frame list) (stck : stack) (envs : env_stack) =
          IntType, BoolType, IntData i -> (frms, push (BoolData (i != 0)) stck, envs)
        | _ -> error ("cannot convert " ^ (string_of_type t1) ^ " to " ^ (string_of_type t2)))
   | IAdd | ISubtract | IMultiply | IDivide | ILessThan | IGreaterThan -> (frms, exec_binop instr stck, envs)
+  | IYield _ -> error "run_til_yield passed an IYield"
 
 (* executes instructions in the given environments until it yields or finishes *)
 (* returns the number of samples yielded and the new execution state *)
 let rec run_til_yield (state : execution_state) =
   match state with
     ([], [], _) -> None
+  | ((ft, (IYield dur)::is) :: frms, stck, envs) -> Some (dur, ((ft, is) :: frms, stck, envs))
   | ((ft, i::is) :: frms, stck, envs) -> run_til_yield (exec i ((ft, is)::frms) stck envs)
   | ((Frame, []) :: frms, stck, envs) -> run_til_yield (frms, stck, envs)
   | ((LoopFrame body, []) :: frms, stck, envs) ->

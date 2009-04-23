@@ -8,7 +8,7 @@ type time = float (* duration or time in samples *)
 type typ =
   ArrayType of array_dimension * typ
 | RefType of typ
-| IntType | FloatType | BoolType | StringType | DurType
+| IntType | FloatType | BoolType | StringType | DurType | TimeType
 and array_dimension = Dynamic | Static of int
 
 type data =
@@ -19,12 +19,13 @@ type data =
 | FloatData of float
 | StringData of string
 | DurData of float
+| TimeData of float
 
 (* map from string names to data types;
    used as template for creating environments *)
 module Context = Map.Make(String)
 type context = typ Context.t
-let builtin_variables = [("samp", DurType)]
+let builtin_variables = [("samp", DurType); ("now", TimeType)]
 let builtin_type name =
   let _, t = List.find (fun (name', t) -> name = name') builtin_variables in
   t
@@ -49,7 +50,7 @@ type instruction =
 | ICast of typ * typ
 | IAdd | ISubtract | IMultiply | IDivide
 | ILessThan | IGreaterThan
-| IYield of time
+| IYield
 
 type func = typ * typ list * instruction list
 type shred_template = context * func list * instruction list
@@ -94,6 +95,7 @@ let rec string_of_type t =
   | FloatType -> "float"
   | StringType -> "string"
   | DurType -> "dur"
+  | TimeType -> "time"
 
 let strings_of_cntxt cntxt =
   Context.fold (fun name (t, d) lst -> ((string_of_type t) ^ " " ^ name) :: lst) cntxt []
@@ -105,7 +107,8 @@ let string_of_data = function
 | BoolData b -> string_of_bool b
 | FloatData f -> string_of_float f
 | StringData s -> s
-| DurData s -> (string_of_float s) ^ "::samp"
+| DurData s -> (string_of_float s)
+| TimeData s -> (string_of_float s)
 
 let rec string_of_instruction = function
   IPushEnv cntxt -> "push env"
@@ -125,7 +128,7 @@ let rec string_of_instruction = function
 | IDivide -> "divide"
 | ILessThan -> "less than"
 | IGreaterThan -> "greater than"
-| IYield dur -> "yield(" ^ (string_of_float dur) ^ ")"
+| IYield -> "yield"
 
 (* UTILITY *)
 
@@ -141,11 +144,17 @@ let pop = function
 (* pushes an item onto a stack *)
 let push d stck = d :: stck
 
-(* pops an item, checking that it's a bool *)
+(* pops a bool *)
 let pop_bool stck =
   match pop stck with
     (BoolData b, stck') -> (b, stck')
   | _ -> error "invalid stack: expected bool"
+
+(* pops a dur *)
+let pop_dur stck =
+  match pop stck with
+    (DurData d, stck') -> (d, stck')
+  | _ -> error "invalid stack: expected dur"
 
 (* pops n items off the stack *)
 let npop n stck =
@@ -257,14 +266,14 @@ let exec instr (frms : frame list) (stck : stack) (envs : env_stack) =
          IntType, BoolType, IntData i -> (frms, push (BoolData (i != 0)) stck, envs)
        | _ -> error ("cannot convert " ^ (string_of_type t1) ^ " to " ^ (string_of_type t2)))
   | IAdd | ISubtract | IMultiply | IDivide | ILessThan | IGreaterThan -> (frms, exec_binop instr stck, envs)
-  | IYield _ -> error "run_til_yield passed an IYield"
+  | IYield -> error "run_til_yield passed IYield to exec"
 
 (* executes instructions in the given environments until it yields or finishes *)
 (* returns the number of samples yielded and the new execution state *)
 let rec run_til_yield (state : execution_state) =
   match state with
     ([], [], _) -> None
-  | ((ft, (IYield dur)::is) :: frms, stck, envs) -> Some (dur, ((ft, is) :: frms, stck, envs))
+  | ((ft, IYield::is) :: frms, stck, envs) -> let d, stck = pop_dur stck in Some (d, ((ft, is) :: frms, stck, envs))
   | ((ft, i::is) :: frms, stck, envs) -> run_til_yield (exec i ((ft, is)::frms) stck envs)
   | ((Frame, []) :: frms, stck, envs) -> run_til_yield (frms, stck, envs)
   | ((LoopFrame body, []) :: frms, stck, envs) ->

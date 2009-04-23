@@ -142,6 +142,7 @@ let rec get_type d =
   | FloatData _ -> FloatType
   | StringData _ -> StringType
   | DurData _ -> DurType
+  | TimeData _ -> TimeType
 
 let cast a b =
   if a = b then
@@ -174,7 +175,12 @@ let rec compile_expr cntxt expr =
   | Array exprs -> raise (Not_implemented "cannot compile array expressions")
   | Comma exprs -> List.fold_left (fun (t, instrs) e -> let (t, i) = compile_expr cntxt e in (t, instrs @ [IDiscard] @ i)) (BoolType, [IPush (BoolData false)]) exprs (* TODO: doity *)
   | UnaryExpr (op, e1) -> raise (Not_implemented "cannot compile unary expressions")
-  | BinaryExpr (Chuck, e, Var v) -> let t, i = compile_expr cntxt e in (t, i @ [(* cast *)] @ [IAssign v])
+  | BinaryExpr (Chuck, e, Var "now") ->
+      let t, i = compile_expr cntxt e in
+      (match t with
+         DurType -> (TimeType, i @ [IYield])
+       | _ -> raise (Compile_error ("cannot chuck " ^ (string_of_type t) ^ " to now")))
+  | BinaryExpr (Chuck, e, Var v) -> let t, i = compile_expr cntxt e in (t, i @ [(* TODO: cast *)] @ [IAssign v])
   | BinaryExpr (op, e1, e2) ->
       let (t1, i1) = compile_expr cntxt e1 in
       let (t2, i2) = compile_expr cntxt e2 in

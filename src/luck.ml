@@ -38,6 +38,7 @@ let main () =
     Parsing.Parse_error -> prerr_endline ("parse error"); exit 1
   | Compile_error msg -> prerr_endline ("compile error: " ^ msg); exit 1
   | Compiler_error msg -> prerr_endline ("compiler error: " ^ msg); exit 1
-  | Not_implemented msg -> prerr_endline ("not implemented: " ^ msg); exit 1
+  | Compile.Not_implemented msg
+  | Vm.Not_implemented msg -> prerr_endline ("not implemented: " ^ msg); exit 1
 
 let _ = main ()

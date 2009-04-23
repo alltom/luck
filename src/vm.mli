@@ -1,5 +1,6 @@
 
 exception Machine_error of string
+exception Not_implemented of string
 
 type time = float
 
@@ -47,6 +48,7 @@ type instruction =
 | IAdd | ISubtract | IMultiply | IDivide
 | ILessThan | IGreaterThan
 | IPreInc of string | IPostInc of string
+| IPreDec of string | IPostDec of string
 | IYield
 
 type func = typ * typ list * instruction list

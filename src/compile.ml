@@ -134,17 +134,6 @@ let rec promote_type t1 t2 =
   | (IntType, _) | (_, IntType) -> IntType
   | _ -> fail ()
 
-let rec get_type d =
-  match d with
-    ArrayData elems -> raise (Not_implemented "get_type for arrays")
-  | RefData d' -> RefType (get_type !d')
-  | IntData _ -> IntType
-  | BoolData _ -> BoolType
-  | FloatData _ -> FloatType
-  | StringData _ -> StringType
-  | DurData _ -> DurType
-  | TimeData _ -> TimeType
-
 let cast a b =
   if a = b then
     []
@@ -175,19 +164,24 @@ let rec compile_expr cntxt expr =
         (t, [IPushVar name])
   | Array exprs -> raise (Not_implemented "cannot compile array expressions")
   | Comma exprs -> List.fold_left (fun (t, instrs) e -> let (t, i) = compile_expr cntxt e in (t, instrs @ [IDiscard] @ i)) (BoolType, [IPush (BoolData false)]) exprs (* TODO: doity *)
-  | UnaryExpr (PreInc, Var v) ->
+  | UnaryExpr (PreInc as op, Var v)
+  | UnaryExpr (PostInc as op, Var v)
+  | UnaryExpr (PreDec as op, Var v)
+  | UnaryExpr (PostDec as op, Var v) ->
       let t = (try Context.find v cntxt with Not_found -> undeclared v) in
       if t = IntType then
-        (t, [IPreInc v])
-      else
-        raise (Compile_error ("cannot use ++ on " ^ (string_of_type t)))
-  | UnaryExpr (PostInc, Var v) ->
-      let t = (try Context.find v cntxt with Not_found -> undeclared v) in
-      if t = IntType then
-        (t, [IPostInc v])
+        let instr =
+          (match op with
+             PreInc -> IPreInc v
+           | PostInc -> IPostInc v
+           | PreDec -> IPreDec v
+           | PostDec -> IPostDec v
+           | _ -> raise (Compile_error "cannot happen"))
+        in (t, [instr])
       else
         raise (Compile_error ("cannot use ++ on " ^ (string_of_type t)))
   | UnaryExpr (PreInc, _) | UnaryExpr (PostInc, _) -> raise (Compile_error ("cannot increment this type of expression"))
+  | UnaryExpr (PreDec, _) | UnaryExpr (PostDec, _) -> raise (Compile_error ("cannot decrement this type of expression"))
   | UnaryExpr (op, e1) -> raise (Not_implemented "cannot compile this unary expression")
   | BinaryExpr (Chuck, e, Var "now") ->
       let t, i = compile_expr cntxt e in

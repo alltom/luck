@@ -1,5 +1,6 @@
 
 exception Machine_error of string
+exception Not_implemented of string
 let error msg = raise (Machine_error msg)
 
 type time = float (* duration or time in samples *)
@@ -51,6 +52,7 @@ type instruction =
 | IAdd | ISubtract | IMultiply | IDivide
 | ILessThan | IGreaterThan
 | IPreInc of string | IPostInc of string
+| IPreDec of string | IPostDec of string
 | IYield
 
 type func = typ * typ list * instruction list
@@ -104,6 +106,17 @@ let rec string_of_type t =
   | DurType -> "dur"
   | TimeType -> "time"
 
+let rec get_type d =
+  match d with
+    ArrayData elems -> raise (Not_implemented "get_type for arrays")
+  | RefData d' -> RefType (get_type !d')
+  | IntData _ -> IntType
+  | BoolData _ -> BoolType
+  | FloatData _ -> FloatType
+  | StringData _ -> StringType
+  | DurData _ -> DurType
+  | TimeData _ -> TimeType
+
 let strings_of_cntxt cntxt =
   Context.fold (fun name (t, d) lst -> ((string_of_type t) ^ " " ^ name) :: lst) cntxt []
 
@@ -137,6 +150,7 @@ let rec string_of_instruction = function
 | ILessThan -> "less than"
 | IGreaterThan -> "greater than"
 | IPreInc v -> "++" ^ v | IPostInc v -> v ^ "++"
+| IPreDec v -> "--" ^ v | IPostDec v -> v ^ "--"
 | IYield -> "yield"
 
 (* UTILITY *)
@@ -282,16 +296,19 @@ let exec instr (frms : frame list) (stck : stack) (envs : env_stack) =
          IntType, BoolType, IntData i -> (frms, push (BoolData (i != 0)) stck, envs)
        | _ -> error ("cannot convert " ^ (string_of_type t1) ^ " to " ^ (string_of_type t2)))
   | IAdd | ISubtract | IMultiply | IDivide | ILessThan | IGreaterThan -> (frms, exec_binop instr stck, envs)
-  | IPreInc v ->
+  | IPreInc v | IPostInc v | IPreDec v | IPostDec v ->
       let slot = (find_mem (first_env_list envs) v) in
       (match !slot with
-         IntData i -> slot := IntData (i + 1); (frms, (IntData (i + 1)) :: stck, envs)
-       | _ -> error "preincr not applied to int")
-  | IPostInc v ->
-      let slot = (find_mem (first_env_list envs) v) in
-      (match !slot with
-         IntData i -> slot := IntData (i + 1); (frms, (IntData i) :: stck, envs)
-       | _ -> error "preincr not applied to int")
+         IntData i ->
+           let newval, retval =
+             (match instr with
+                IPreInc _ -> i+1, i+1
+              | IPostInc _ -> i+1, i
+              | IPreDec _ -> i-1, i-1
+              | IPostDec _ -> i-1, i
+              | _ -> error "cannot happen")
+           in slot := IntData newval; (frms, (IntData retval) :: stck, envs)
+       | _ -> error ("incr/decr applied to invalid data type, " ^ (string_of_type (get_type !slot))))
   | IYield -> error "run_til_yield passed IYield to exec"
 
 (* executes instructions in the given environments until it yields or finishes *)

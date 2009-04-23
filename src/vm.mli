@@ -82,7 +82,7 @@ val string_of_instruction : instruction -> string
 
 module VM :
   sig
-    type vm = time * Shred.shred Priority_queue.queue
+    type vm
     val empty : vm
     val add : vm -> shred_template -> vm
     val run : time -> vm -> vm

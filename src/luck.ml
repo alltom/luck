@@ -4,7 +4,7 @@ open Vm
 
 let arg_print_instrs = ref false
 let window_size = ref 100.0
-let usage = "usage: " ^ Sys.argv.(0) ^ " [-i]"
+let usage = "usage: " ^ Sys.argv.(0) ^ " [-i] [-w window_size]"
 
 let speclist = [
   ("-i", Arg.Unit (fun () -> arg_print_instrs := true), " print instructions before execution");
@@ -22,7 +22,7 @@ let main () =
   try
     let tree = Parser.input Lexer.token (Lexing.from_channel stdin) in
     let shred = Compile.compile Vm.Context.empty tree in
-    (* if !arg_print_instrs then print_instrs (Shred.instrs shred); *)
+    if !arg_print_instrs then print_instrs (shred_instructions shred);
     let vm = VM.add VM.empty shred in
     let rec run vm =
       let vm = VM.run !window_size vm in

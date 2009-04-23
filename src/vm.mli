@@ -55,6 +55,8 @@ type instruction =
 type func = typ * typ list * instruction list
 type shred_template = context * func list * instruction list
 
+val shred_instructions : shred_template -> instruction list
+
 module Env :
   sig
     type environment

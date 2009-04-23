@@ -55,6 +55,9 @@ type instruction =
 type func = typ * typ list * instruction list
 type shred_template = context * func list * instruction list
 
+(* returns the instructions from a shred template *)
+let shred_instructions (_, _, instrs) = instrs
+
 (* TODO: classes *)
 module Env =
   struct

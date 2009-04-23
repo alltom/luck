@@ -262,6 +262,18 @@ let rec compile_stmt parent_cntxt local_cntxt stmt =
           @ (cast tc BoolType)
           @ [IWhile (body_instrs @ ic @ (cast tc BoolType))]
           @ [IPopEnv]
+    | Repeat (cond, stmts) ->
+        let (cond_cntxt, cond) = extract_expr_cntxt cond in
+        let cntxt = combine_cntxts true cntxt cond_cntxt in
+        let (tc, ic) = compile_expr cntxt cond in
+        let (body_cntxt, body_instrs) = compile_stmts cntxt stmts in
+        if tc = IntType then
+          [IPushEnv (combine_cntxts false cond_cntxt body_cntxt)]
+            @ ic
+            @ [IRepeat body_instrs]
+            @ [IPopEnv]
+        else
+          raise (Compile_error ("argument in repeat must be int, not " ^ (string_of_type tc)))
     | For (init, cond, incr, stmts) ->
         let (init_cntxt, init) = extract_expr_cntxt init in
         let cntxt = combine_cntxts true cntxt init_cntxt in

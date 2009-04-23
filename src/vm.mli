@@ -41,6 +41,7 @@ type instruction =
 | IAssign of string
 | IBranch of instruction list * instruction list
 | IWhile of instruction list
+| IRepeat of instruction list
 | IBreak
 | IPrint of int
 | ICast of typ * typ

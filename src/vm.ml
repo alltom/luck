@@ -45,7 +45,8 @@ type instruction =
 | IAssign of string (* puts top stack value in variable with given name; leaves value on stack *)
 | IBranch of instruction list * instruction list (* if true body, if false body *)
 | IWhile of instruction list (* body instructions *)
-| IBreak (* pops a LoopFrame and an environment *)
+| IRepeat of instruction list (* body instructions *)
+| IBreak (* pops a WhileFrame and an environment *)
 | IPrint of int (* number of things to print (consumes) *)
 | ICast of typ * typ
 | IAdd | ISubtract | IMultiply | IDivide
@@ -73,7 +74,10 @@ module Env =
 
 (* instruction lists are popped and pushed in blocks called frames
    as functions are called, loops entered, etc *)
-type frame_type = Frame | LoopFrame of instruction list (* body of loop *)
+type frame_type =
+  Frame
+| WhileFrame of instruction list (* body of loop *)
+| RepeatFrame of int * instruction list
 type frame = frame_type * instruction list
 type env_stack = (Env.environment list) list
 type stack = data list
@@ -122,6 +126,7 @@ let rec string_of_instruction = function
 | IAssign s -> "assign " ^ s
 | IBranch (f1, f2) -> "if (" ^ (String.concat "; " (List.map string_of_instruction f1)) ^ ") (" ^ (String.concat "; " (List.map string_of_instruction f2)) ^ ")"
 | IWhile body -> "while (...) { " ^ (String.concat "; " (List.map string_of_instruction body)) ^ " }"
+| IRepeat body -> "repeat (...) { " ^ (String.concat "; " (List.map string_of_instruction body)) ^ " }"
 | IBreak -> "break"
 | IPrint i -> "print " ^ (string_of_int i)
 | ICast (t1, t2) -> "cast " ^ (string_of_type t1) ^ " -> " ^ (string_of_type t2)
@@ -152,6 +157,12 @@ let pop_bool stck =
   match pop stck with
     (BoolData b, stck') -> (b, stck')
   | _ -> error "invalid stack: expected bool"
+
+(* pops an int *)
+let pop_int stck =
+  match pop stck with
+    (IntData i, stck') -> (i, stck')
+  | _ -> error "invalid stack: expected int"
 
 (* pops a dur *)
 let pop_dur stck =
@@ -249,12 +260,18 @@ let exec instr (frms : frame list) (stck : stack) (envs : env_stack) =
   | IWhile body_frame ->
       let (cond, stck) = pop_bool stck in
       if cond then
-        ((LoopFrame body_frame, body_frame) :: frms, stck, envs)
+        ((WhileFrame body_frame, body_frame) :: frms, stck, envs)
+      else
+        (frms, stck, envs)
+  | IRepeat body_frame ->
+      let (times, stck) = pop_int stck in
+      if times > 0 then
+        ((RepeatFrame (times - 1, body_frame), body_frame) :: frms, stck, envs)
       else
         (frms, stck, envs)
   | IBreak ->
       (match (frms, envs) with
-         ((LoopFrame _, _) :: frms, _ :: envs) -> (frms, stck, envs)
+         ((WhileFrame _, _) :: frms, _ :: envs) -> (frms, stck, envs)
        | (_ :: frms, _ :: envs) -> error "cannot break out of a non-loop frame"
        | _ -> error "missing a frame or environment to pop")
   | IPrint count -> (frms, (print count stck), envs)
@@ -274,10 +291,15 @@ let rec run_til_yield (state : execution_state) =
   | ((ft, IYield::is) :: frms, stck, envs) -> let d, stck = pop_dur stck in Some (d, ((ft, is) :: frms, (TimeData 0.0 (* HACK *)) :: stck, envs))
   | ((ft, i::is) :: frms, stck, envs) -> run_til_yield (exec i ((ft, is)::frms) stck envs)
   | ((Frame, []) :: frms, stck, envs) -> run_til_yield (frms, stck, envs)
-  | ((LoopFrame body, []) :: frms, stck, envs) ->
+  | ((WhileFrame body, []) :: frms, stck, envs) ->
       let (cond, stck) = pop_bool stck in
       if cond then
-        run_til_yield ((LoopFrame body, body) :: frms, stck, envs)
+        run_til_yield ((WhileFrame body, body) :: frms, stck, envs)
+      else
+        run_til_yield (frms, stck, envs)
+  | ((RepeatFrame (times, body), []) :: frms, stck, envs) ->
+      if times > 0 then
+        run_til_yield ((RepeatFrame (times - 1, body), body) :: frms, stck, envs)
       else
         run_til_yield (frms, stck, envs)
   | (frms, stck, envs) -> error ("invalid machine state: "

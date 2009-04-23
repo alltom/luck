@@ -261,7 +261,7 @@ let exec instr (frms : frame list) (stck : stack) (envs : env_stack) =
     IPushEnv cntxt -> (frms, stck, push_env (inst_context cntxt) envs)
   | IPopEnv ->
       (match envs with
-         _ :: envs -> (frms, stck, envs)
+         (_ :: envs) :: rest -> (frms, stck, envs :: rest)
        | _ -> error "cannot pop environment")
   | IPush d -> (frms, d :: stck, envs)
   | IPushVar var -> (frms, !(find_mem (first_env_list envs) var) :: stck, envs)

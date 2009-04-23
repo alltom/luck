@@ -28,7 +28,7 @@ let load_file name =
 let main () =
   Arg.parse speclist (fun fname -> filenames := !filenames @ [fname]) usage;
   try
-    let vm = List.fold_left (fun vm n -> VM.add vm (load_file n)) VM.empty !filenames in
+    let vm = List.fold_left (fun vm n -> VM.add vm (load_file n)) VM.fresh !filenames in
     let rec run vm =
       let vm = VM.run !window_size vm in
       if VM.running vm then run vm else ()

@@ -84,7 +84,7 @@ val string_of_instruction : instruction -> string
 module VM :
   sig
     type vm
-    val empty : vm
+    val fresh : vm
     val add : vm -> shred_template -> vm
     val run : time -> vm -> vm
     val running : vm -> bool

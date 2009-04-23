@@ -341,7 +341,7 @@ let rec run_til_yield (state : execution_state) =
 module VM =
   struct
     type vm = time * Shred.shred Priority_queue.queue (* now, shreds *)
-    let empty = (0.0, Priority_queue.empty)
+    let fresh = (0.0, Priority_queue.empty)
     let add (now, q) (cntxt, funcs, instrs) =
       let shred = Shred.shred now ([(Frame, instrs)], [], [(inst_context cntxt) :: [(* TODO: global VM env *)]]) in
       (now, Priority_queue.insert q now shred)

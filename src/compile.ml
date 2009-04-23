@@ -5,7 +5,6 @@ open Vm
 exception Compile_error of string (* something is wrong with the input *)
 exception Compiler_error of string (* something went wrong internally *)
 exception Not_implemented of string
-exception Type_mismatch of string
 
 let rec typ_of_asttype asttype =
   match asttype with
@@ -121,7 +120,7 @@ let rec extract_stmt_cntxt stmt =
 (* returns the type which best covers t1 and t2 *)
 let rec promote_type t1 t2 =
   let fail () =
-    raise (Type_mismatch ("incompatible types " ^ (string_of_type t1) ^ " and " ^ (string_of_type t2)))
+    raise (Compile_error ("incompatible types " ^ (string_of_type t1) ^ " and " ^ (string_of_type t2)))
   in
   if t1 = t2 then t1 else
   match (t1, t2) with

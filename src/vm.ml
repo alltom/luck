@@ -202,11 +202,6 @@ let inst_context cntxt =
   in
   Context.fold (fun name t env -> Env.add_mem name (ref (inst_type name t)) env) cntxt Env.empty
 
-(* TODO: global env *)
-let instantiate_shred env (shred_templ : shred_template) : execution_state =
-  let cntxt, funcs, instrs = shred_templ in
-  ([(Frame, instrs)], [], [(inst_context cntxt) :: [env]])
-
 (* data should already be casted so types match (see compile.ml) *)
 let exec_binop instr stck =
   let (b, stck) = pop stck in (* pop in reverse order! *)
@@ -293,14 +288,17 @@ let rec run_til_yield (state : execution_state) =
 module VM =
   struct
     type vm = time * Shred.shred Priority_queue.queue (* now, shreds *)
-    let empty now = (now, Priority_queue.empty)
-    let add vm shred = Priority_queue.insert vm (Shred.now shred) shred
-    let next_shred vm = let _, shred, queue = Priority_queue.extract vm in (shred, queue)
+    let empty = (0.0, Priority_queue.empty)
+    let add (now, q) (cntxt, funcs, instrs) =
+      let shred = Shred.shred now ([(Frame, instrs)], [], [(inst_context cntxt) :: [(* TODO: global VM env *)]]) in
+      (now, Priority_queue.insert q now shred)
+    let re_add (now, q) shred = (now, Priority_queue.insert q now shred)
+    let next_shred (now, q) = let _, shred, q' = Priority_queue.extract q in (shred, (now, q'))
     let rec run samples vm =
       let shred, vm = next_shred vm in
       match run_til_yield (Shred.state shred) with
         None -> run samples vm
       | Some(elapsed, state) ->
-          let vm = add vm (Shred.shred ((Shred.now shred) +. elapsed) state) in
+          let vm = re_add vm (Shred.shred ((Shred.now shred) +. elapsed) state) in
           if elapsed > samples then vm else run (samples -. elapsed) vm
   end

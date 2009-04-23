@@ -295,7 +295,7 @@ module VM =
     let add (now, q) (cntxt, funcs, instrs) =
       let shred = Shred.shred now ([(Frame, instrs)], [], [(inst_context cntxt) :: [(* TODO: global VM env *)]]) in
       (now, Priority_queue.insert q now shred)
-    let re_add (now, q) shred = (now, Priority_queue.insert q now shred)
+    let re_add (now, q) shred = (now, Priority_queue.insert q (Shred.now shred) shred)
     let next_shred (now, q) = let _, shred, q' = Priority_queue.extract q in (shred, (now, q'))
     let running (now, q) = not (Priority_queue.is_empty q)
     let rec run samples vm =

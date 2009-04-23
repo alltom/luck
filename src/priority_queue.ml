@@ -30,3 +30,7 @@ let rec remove_top = function
 let extract = function
   Empty -> raise Queue_is_empty
 | Node(prio, elt, _, _) as queue -> (prio, elt, remove_top queue)
+
+let is_empty = function
+  Empty -> true
+| _ -> false

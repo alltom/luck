@@ -294,11 +294,14 @@ module VM =
       (now, Priority_queue.insert q now shred)
     let re_add (now, q) shred = (now, Priority_queue.insert q now shred)
     let next_shred (now, q) = let _, shred, q' = Priority_queue.extract q in (shred, (now, q'))
+    let running (now, q) = not (Priority_queue.is_empty q)
     let rec run samples vm =
-      let shred, vm = next_shred vm in
-      match run_til_yield (Shred.state shred) with
-        None -> run samples vm
-      | Some(elapsed, state) ->
-          let vm = re_add vm (Shred.shred ((Shred.now shred) +. elapsed) state) in
-          if elapsed > samples then vm else run (samples -. elapsed) vm
+      try
+        let shred, vm = next_shred vm in
+        match run_til_yield (Shred.state shred) with
+          None -> run samples vm
+        | Some(elapsed, state) ->
+            let vm = re_add vm (Shred.shred ((Shred.now shred) +. elapsed) state) in
+            if elapsed > samples then vm else run (samples -. elapsed) vm
+      with Priority_queue.Queue_is_empty -> vm
   end

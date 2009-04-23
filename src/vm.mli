@@ -86,4 +86,5 @@ module VM :
     val empty : vm
     val add : vm -> shred_template -> vm
     val run : time -> vm -> vm
+    val running : vm -> bool
   end

@@ -22,7 +22,11 @@ let main () =
     let shred = Compile.compile Vm.Context.empty tree in
     (* if !arg_print_instrs then print_instrs (Shred.instrs shred); *)
     let vm = VM.add VM.empty shred in
-    VM.run 1.0 vm
+    let rec run vm =
+      let vm = VM.run 1.0 vm in
+      if VM.running vm then run vm else ()
+    in
+    run vm
   with
     Parsing.Parse_error -> prerr_endline ("parse error"); exit 1
   | Compile_error msg -> prerr_endline ("compile error: " ^ msg); exit 1

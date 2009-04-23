@@ -3,10 +3,12 @@ open Compile
 open Vm
 
 let arg_print_instrs = ref false
+let window_size = ref 100.0
 let usage = "usage: " ^ Sys.argv.(0) ^ " [-i]"
 
 let speclist = [
-  ("-i", Arg.Unit (fun () -> arg_print_instrs := true), ": print instructions before execution");
+  ("-i", Arg.Unit (fun () -> arg_print_instrs := true), " print instructions before execution");
+  ("-w <num>", Arg.Int (fun w -> window_size := float_of_int w), " window size");
 ]
 
 let print_instrs instrs =
@@ -23,7 +25,7 @@ let main () =
     (* if !arg_print_instrs then print_instrs (Shred.instrs shred); *)
     let vm = VM.add VM.empty shred in
     let rec run vm =
-      let vm = VM.run 1.0 vm in
+      let vm = VM.run !window_size vm in
       if VM.running vm then run vm else ()
     in
     run vm

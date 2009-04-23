@@ -5,7 +5,7 @@ open Vm
 let arg_print_instrs = ref false
 let window_size = ref 100.0
 let filenames = ref []
-let usage = "usage: " ^ Sys.argv.(0) ^ " [-i] [-w window_size]"
+let usage = "usage: " ^ Sys.argv.(0) ^ " [-i] [-w window_size] files [...]"
 
 let speclist = [
   ("-i", Arg.Unit (fun () -> arg_print_instrs := true), " print instructions before execution");

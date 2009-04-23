@@ -271,7 +271,7 @@ let exec instr (frms : frame list) (stck : stack) (envs : env_stack) =
 let rec run_til_yield (state : execution_state) =
   match state with
     ([], [], _) -> None
-  | ((ft, IYield::is) :: frms, stck, envs) -> let d, stck = pop_dur stck in Some (d, ((ft, is) :: frms, stck, envs))
+  | ((ft, IYield::is) :: frms, stck, envs) -> let d, stck = pop_dur stck in Some (d, ((ft, is) :: frms, (TimeData 0.0 (* HACK *)) :: stck, envs))
   | ((ft, i::is) :: frms, stck, envs) -> run_til_yield (exec i ((ft, is)::frms) stck envs)
   | ((Frame, []) :: frms, stck, envs) -> run_til_yield (frms, stck, envs)
   | ((LoopFrame body, []) :: frms, stck, envs) ->

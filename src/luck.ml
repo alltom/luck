@@ -28,6 +28,8 @@ let load_file name =
 let main () =
   Arg.parse speclist (fun fname -> filenames := !filenames @ [fname]) usage;
   try
+    if List.length !filenames = 0 then
+      (prerr_endline "[luck]: no input files... (try --help)"; exit 1);
     let vm = List.fold_left (fun vm n -> VM.add vm (load_file n)) VM.fresh !filenames in
     let rec run vm =
       let vm = VM.run !window_size vm in

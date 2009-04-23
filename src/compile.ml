@@ -6,6 +6,8 @@ exception Compile_error of string (* something is wrong with the input *)
 exception Compiler_error of string (* something went wrong internally *)
 exception Not_implemented of string
 
+let undeclared var = raise (Compile_error ("use of undeclared variable " ^ var))
+
 let rec typ_of_asttype asttype =
   match asttype with
     Type("int", false, _, []) -> IntType
@@ -173,7 +175,20 @@ let rec compile_expr cntxt expr =
         (t, [IPushVar name])
   | Array exprs -> raise (Not_implemented "cannot compile array expressions")
   | Comma exprs -> List.fold_left (fun (t, instrs) e -> let (t, i) = compile_expr cntxt e in (t, instrs @ [IDiscard] @ i)) (BoolType, [IPush (BoolData false)]) exprs (* TODO: doity *)
-  | UnaryExpr (op, e1) -> raise (Not_implemented "cannot compile unary expressions")
+  | UnaryExpr (PreInc, Var v) ->
+      let t = (try Context.find v cntxt with Not_found -> undeclared v) in
+      if t = IntType then
+        (t, [IPreInc v])
+      else
+        raise (Compile_error ("cannot use ++ on " ^ (string_of_type t)))
+  | UnaryExpr (PostInc, Var v) ->
+      let t = (try Context.find v cntxt with Not_found -> undeclared v) in
+      if t = IntType then
+        (t, [IPostInc v])
+      else
+        raise (Compile_error ("cannot use ++ on " ^ (string_of_type t)))
+  | UnaryExpr (PreInc, _) | UnaryExpr (PostInc, _) -> raise (Compile_error ("cannot increment this type of expression"))
+  | UnaryExpr (op, e1) -> raise (Not_implemented "cannot compile this unary expression")
   | BinaryExpr (Chuck, e, Var "now") ->
       let t, i = compile_expr cntxt e in
       (match t with

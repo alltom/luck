@@ -33,24 +33,20 @@ val builtin_cntxt : typ Context.t
 val is_builtin : string -> bool
 
 type instruction =
-  IPushEnv of context
-| IPopEnv
+  IPushEnv of context | IPopEnv
 | IPush of data
 | IDiscard
 | IPushVar of string
-| IAssign of string
-| IBranch of instruction list * instruction list
-| IWhile of instruction list
-| IRepeat of instruction list
-| IBreak
-| IPrint of int
+| IAssign of string (* puts top stack value in variable with given name; leaves value on stack *)
+| IBranch of instruction list * instruction list (* if true body, if false body *)
+| IWhile of instruction list (* body instructions *)
+| IRepeat of instruction list (* body instructions *)
+| IBreak (* pops a WhileFrame and an environment *)
+| IPrint of int (* number of things to print (consumes) *)
 | ICast of typ * typ
-| IAdd
-| ISubtract
-| IMultiply
-| IDivide
-| ILessThan
-| IGreaterThan
+| IAdd | ISubtract | IMultiply | IDivide
+| ILessThan | IGreaterThan
+| IPreInc of string | IPostInc of string
 | IYield
 
 type func = typ * typ list * instruction list

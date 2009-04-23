@@ -1,7 +1,6 @@
 
 exception Machine_error of string
-let error msg =
-  raise (Machine_error msg)
+let error msg = raise (Machine_error msg)
 
 type time = float (* duration or time in samples *)
 
@@ -51,6 +50,7 @@ type instruction =
 | ICast of typ * typ
 | IAdd | ISubtract | IMultiply | IDivide
 | ILessThan | IGreaterThan
+| IPreInc of string | IPostInc of string
 | IYield
 
 type func = typ * typ list * instruction list
@@ -136,6 +136,7 @@ let rec string_of_instruction = function
 | IDivide -> "divide"
 | ILessThan -> "less than"
 | IGreaterThan -> "greater than"
+| IPreInc v -> "++" ^ v | IPostInc v -> v ^ "++"
 | IYield -> "yield"
 
 (* UTILITY *)
@@ -281,6 +282,16 @@ let exec instr (frms : frame list) (stck : stack) (envs : env_stack) =
          IntType, BoolType, IntData i -> (frms, push (BoolData (i != 0)) stck, envs)
        | _ -> error ("cannot convert " ^ (string_of_type t1) ^ " to " ^ (string_of_type t2)))
   | IAdd | ISubtract | IMultiply | IDivide | ILessThan | IGreaterThan -> (frms, exec_binop instr stck, envs)
+  | IPreInc v ->
+      let slot = (find_mem (first_env_list envs) v) in
+      (match !slot with
+         IntData i -> slot := IntData (i + 1); (frms, (IntData (i + 1)) :: stck, envs)
+       | _ -> error "preincr not applied to int")
+  | IPostInc v ->
+      let slot = (find_mem (first_env_list envs) v) in
+      (match !slot with
+         IntData i -> slot := IntData (i + 1); (frms, (IntData i) :: stck, envs)
+       | _ -> error "preincr not applied to int")
   | IYield -> error "run_til_yield passed IYield to exec"
 
 (* executes instructions in the given environments until it yields or finishes *)

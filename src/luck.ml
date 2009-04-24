@@ -10,7 +10,7 @@ let usage = "usage: " ^ Sys.argv.(0) ^ " [-i] [-w window_size] files [...]"
 let speclist = [
   ("-i", Arg.Unit (fun () -> arg_print_instrs := true), " print instructions before execution");
   ("-w", Arg.Int (fun w -> window_size := float_of_int w), " window size");
-  ("--", Arg.Rest (fun fname -> filenames := !filenames @ [fname]), " files to load");
+  ("--", Arg.Rest (fun fname -> filenames := !filenames @ [fname]), " files to load (- for stdin)");
 ]
 
 let print_instrs instrs =

@@ -32,7 +32,7 @@ OCAMLYACCFLAGS += -v
 # and .mly files.
 OCamlGeneratedFiles(parser.ml parser.mli lexer.ml)
 
-.DEFAULT: $(OCamlProgram luck, parser lexer ast vm compile priority_queue luck)
+.DEFAULT: $(OCamlProgram luck, parser lexer ast ugen vm compile priority_queue luck)
 
 TESTS[] =
    $(OCamlProgram parser_test, parser lexer ast parser_test)

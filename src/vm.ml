@@ -346,15 +346,20 @@ module VM =
       let shred = Shred.shred now ([(Frame, instrs)], [], [(inst_context cntxt) :: [(* TODO: global VM env *)]]) in
       (now, Priority_queue.insert q now shred)
     let re_add (now, q) shred = (now, Priority_queue.insert q (Shred.now shred) shred)
+    let set_time (now, q) time = (time, q)
     let next_shred (now, q) = let _, shred, q' = Priority_queue.extract q in (shred, (now, q'))
     let running (now, q) = not (Priority_queue.is_empty q)
-    let rec run samples vm =
+    let rec run max_samples ((now, q) as vm) =
       try
         let shred, vm = next_shred vm in
-        match run_til_yield (Shred.state shred) with
-          None -> run samples vm
-        | Some(elapsed, state) ->
-            let vm = re_add vm (Shred.shred ((Shred.now shred) +. elapsed) state) in
-            if elapsed > samples then vm else run (samples -. elapsed) vm
-      with Priority_queue.Queue_is_empty -> vm
+        if (Shred.now shred) -. now >= max_samples then (* no changes to DSP change in this time *)
+          set_time vm (now +. max_samples)
+        else
+          match run_til_yield (Shred.state shred) with
+            None -> run max_samples vm (* shred finished *)
+          | Some(elapsed, state) ->
+              let vm = re_add vm (Shred.shred ((Shred.now shred) +. elapsed) state) in
+              set_time vm (now +. max_samples)
+      with Priority_queue.Queue_is_empty ->
+        set_time vm (now +. max_samples) (* no shreds *)
   end

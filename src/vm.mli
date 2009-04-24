@@ -86,6 +86,6 @@ module VM :
     type vm
     val fresh : vm
     val add : vm -> shred_template -> vm
-    val run : time -> vm -> vm
+    val run : time -> vm -> vm (* max samples *)
     val running : vm -> bool
   end

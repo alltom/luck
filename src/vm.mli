@@ -34,22 +34,23 @@ val builtin_cntxt : typ Context.t
 val is_builtin : string -> bool
 
 type instruction =
-  IPushEnv of context | IPopEnv
-| IPush of data
-| IDiscard
-| IPushVar of string
+  IPushEnv of context (* instantiates the context and pushes env onto stack *)
+| IPopEnv (* pops the top-most env *)
+| IPush of data (* pushes a value onto the stack *)
+| IDiscard (* discards the top stack value *)
+| IPushVar of string (* pushes current value of var onto stack *)
 | IAssign of string (* puts top stack value in variable with given name; leaves value on stack *)
-| IBranch of instruction list * instruction list (* if true body, if false body *)
-| IWhile of instruction list (* body instructions *)
-| IRepeat of instruction list (* body instructions *)
-| IBreak (* pops a WhileFrame and an environment *)
-| IPrint of int (* number of things to print (consumes) *)
-| ICast of typ * typ
-| IAdd | ISubtract | IMultiply | IDivide
-| ILessThan | IGreaterThan
-| IPreInc of string | IPostInc of string
-| IPreDec of string | IPostDec of string
-| IYield
+| IBranch of instruction list * instruction list (* pops stack value; if true, execs first list, else the other *)
+| IWhile of instruction list (* repeats instructions until top stack value is false *)
+| IRepeat of instruction list (* pops int from stack, repeats instructions that number of times *)
+| IBreak (* pops a loop frame and an environment *)
+| IPrint of int (* pops and prints the given number of stack values to stdout *)
+| ICast of typ (* converts value at top of stack to this type *)
+| IAdd | ISubtract | IMultiply | IDivide (* replaces top two stack values with the result *)
+| ILessThan | IGreaterThan (* replaces top two stack values with the comparison *)
+| IPreInc of string | IPostInc of string (* ++a and a++ *)
+| IPreDec of string | IPostDec of string (* --a and a-- *)
+| IYield (* pops a dur and yields that number of samples *)
 
 type func = typ * typ list * instruction list
 type shred_template = context * func list * instruction list

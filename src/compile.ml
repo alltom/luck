@@ -160,7 +160,7 @@ let rec compile_expr cntxt expr =
       if is_builtin name then
         (builtin_type name, [IPushVar name])
       else
-        let t = (try Context.find name cntxt with Not_found -> raise (Compile_error ("variable " ^ name ^ " undeclared"))) in
+        let t = (try Context.find name cntxt with Not_found -> undeclared name) in
         (t, [IPushVar name])
   | Array exprs -> raise (Not_implemented "cannot compile array expressions")
   | Comma exprs -> List.fold_left (fun (t, instrs) e -> let (t, i) = compile_expr cntxt e in (t, instrs @ [IDiscard] @ i)) (BoolType, [IPush (BoolData false)]) exprs (* TODO: doity *)

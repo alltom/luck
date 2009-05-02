@@ -48,7 +48,7 @@ type instruction =
 | IRepeat of instruction list (* body instructions *)
 | IBreak (* pops a WhileFrame and an environment *)
 | IPrint of int (* number of things to print (consumes) *)
-| ICast of typ * typ
+| ICast of typ
 | IAdd | ISubtract | IMultiply | IDivide
 | ILessThan | IGreaterThan
 | IPreInc of string | IPostInc of string
@@ -106,10 +106,10 @@ let rec string_of_type t =
   | DurType -> "dur"
   | TimeType -> "time"
 
-let rec get_type d =
+let rec type_of_data d =
   match d with
-    ArrayData elems -> raise (Not_implemented "get_type for arrays")
-  | RefData d' -> RefType (get_type !d')
+    ArrayData elems -> raise (Not_implemented "type_of_data for arrays")
+  | RefData d' -> RefType (type_of_data !d')
   | IntData _ -> IntType
   | BoolData _ -> BoolType
   | FloatData _ -> FloatType
@@ -142,7 +142,7 @@ let rec string_of_instruction = function
 | IRepeat body -> "repeat (...) { " ^ (String.concat "; " (List.map string_of_instruction body)) ^ " }"
 | IBreak -> "break"
 | IPrint i -> "print " ^ (string_of_int i)
-| ICast (t1, t2) -> "cast " ^ (string_of_type t1) ^ " -> " ^ (string_of_type t2)
+| ICast t -> "cast -> " ^ (string_of_type t)
 | IAdd -> "add"
 | ISubtract -> "subtract"
 | IMultiply -> "multiply"
@@ -290,11 +290,11 @@ let exec instr (frms : frame list) (stck : stack) (envs : env_stack) =
        | (_ :: frms, _ :: envs) -> error "cannot break out of a non-loop frame"
        | _ -> error "missing a frame or environment to pop")
   | IPrint count -> (frms, (print count stck), envs)
-  | ICast (t1, t2) ->
+  | ICast t ->
       let (v, stck) = pop stck in
-      (match t1, t2, v with
-         IntType, BoolType, IntData i -> (frms, push (BoolData (i != 0)) stck, envs)
-       | _ -> error ("cannot convert " ^ (string_of_type t1) ^ " to " ^ (string_of_type t2)))
+      (match t, v with
+         BoolType, IntData i -> (frms, push (BoolData (i != 0)) stck, envs)
+       | _ -> error ("cannot convert " ^ (string_of_type (type_of_data v)) ^ " to " ^ (string_of_type t)))
   | IAdd | ISubtract | IMultiply | IDivide | ILessThan | IGreaterThan -> (frms, exec_binop instr stck, envs)
   | IPreInc v | IPostInc v | IPreDec v | IPostDec v ->
       let slot = (find_mem (first_env_list envs) v) in
@@ -308,7 +308,7 @@ let exec instr (frms : frame list) (stck : stack) (envs : env_stack) =
               | IPostDec _ -> i-1, i
               | _ -> error "cannot happen")
            in slot := IntData newval; (frms, (IntData retval) :: stck, envs)
-       | _ -> error ("incr/decr applied to invalid data type, " ^ (string_of_type (get_type !slot))))
+       | _ -> error ("incr/decr applied to invalid data type, " ^ (string_of_type (type_of_data !slot))))
   | IYield -> error "run_til_yield passed IYield to exec"
 
 (* executes instructions in the given environments until it yields or finishes *)

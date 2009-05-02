@@ -144,7 +144,7 @@ let cast a b =
     | (FloatType, IntType)
     | (FloatType, BoolType)
     | (BoolType, IntType)
-    | (BoolType, FloatType) -> [ICast (a, b)]
+    | (BoolType, FloatType) -> [ICast b]
     | _ -> raise (Compile_error ("cannot convert from " ^ (string_of_type a) ^ " to " ^ (string_of_type b)))
 
 (* TODO: add cast before assignment *)

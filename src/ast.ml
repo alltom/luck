@@ -110,7 +110,7 @@ let rec string_of_stmt stmt =
   | If (e, then_stmts, else_stmts) -> "if(.){.}else{.}"
   | For (e1, e2, e3, stmts) -> "for(.;.;.){.}"
 
-let ast_summary (fns, classes, stmts) =
+let print_ast_summary (fns, classes, stmts) =
   let ip pref str = print_endline (pref ^ str) in
   let function_summary pref (Function(typ, name, decl, stmts)) =
     let p = ip pref in

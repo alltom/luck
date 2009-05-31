@@ -4,16 +4,18 @@ exception Not_implemented of string
 
 type time = float
 
-type typ =
-  ArrayType of array_dimension * typ
-| RefType of typ
-| IntType
-| FloatType
-| BoolType
-| StringType
-| DurType
-| TimeType
-and array_dimension = Dynamic | Static of int
+type
+  typ =
+    ArrayType of array_dimension * typ
+  | RefType of typ
+  | IntType
+  | FloatType
+  | BoolType
+  | StringType
+  | DurType
+  | TimeType
+  and
+  array_dimension = Dynamic | Static of int
 
 type data =
   ArrayData of data array

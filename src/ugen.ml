@@ -15,9 +15,15 @@ class type ugen =
 class in_hole =
   object
     val mutable inputs : ugen list = []
-    method add ugen = inputs <- ugen :: inputs
-    method remove ugen = inputs <- List.filter (fun u -> u = ugen) inputs
+    
+    method add ugen =
+      inputs <- ugen :: inputs
+    
+    method remove ugen =
+      inputs <- List.filter (fun u -> u = ugen) inputs
+    
     method inputs = inputs
+    
     method sum samples =
       let add_to to_arr from_arr =
         Array.iteri (fun i ugen -> to_arr.(i) <- to_arr.(i) +. from_arr.(i)) to_arr
@@ -32,16 +38,27 @@ class gain : ugen =
   object
     val default_input = new in_hole
     val mutable buffer = Array.make 0 0.0
-    method tick now samples = buffer <- default_input#sum samples
+    
+    method tick now samples =
+      buffer <- default_input#sum samples
+    
     method last = buffer
-    method has_input name = name = "default"
+    
+    method has_input name =
+      name = "default"
+    
     method connect input_name ugen =
       if input_name = "default" then
         default_input#add ugen
-      else raise Nonexistent_input
+      else
+        raise Nonexistent_input
+    
     method disconnect input_name ugen =
       if input_name = "default" then
         default_input#remove ugen
-      else raise Nonexistent_input
-    method parents = default_input#inputs
+      else
+        raise Nonexistent_input
+    
+    method parents =
+      default_input#inputs
   end

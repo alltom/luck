@@ -1,6 +1,6 @@
 
 open Ast
-open Interpret
+open Interpreter
 open Vm
 
 exception Compile_error of string (* something is wrong with the input *)

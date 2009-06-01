@@ -1,5 +1,5 @@
 
-open Interpret
+open Interpreter
 
 exception Machine_error of string
 exception Not_implemented of string

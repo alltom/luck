@@ -1,6 +1,6 @@
 
 open Compiler
-open Interpret
+open Interpreter
 open Vm
 
 let arg_print_instrs = ref false

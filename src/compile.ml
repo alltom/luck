@@ -1,5 +1,6 @@
 
 open Ast
+open Interpret
 open Vm
 
 exception Compile_error of string (* something is wrong with the input *)
@@ -7,6 +8,13 @@ exception Compiler_error of string (* something went wrong internally *)
 exception Not_implemented of string
 
 let undeclared var = raise (Compile_error ("use of undeclared variable " ^ var))
+
+let builtin_variables = [("samp", DurType); ("now", TimeType)]
+let builtin_type name =
+  let _, t = List.find (fun (name', t) -> name = name') builtin_variables in
+  t
+let is_builtin name =
+  List.exists (fun (name', _) -> name' = name) builtin_variables
 
 let rec typ_of_asttype asttype =
   match asttype with

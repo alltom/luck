@@ -1,5 +1,6 @@
 
 open Compile
+open Interpret
 open Vm
 
 let arg_print_instrs = ref false
@@ -21,7 +22,7 @@ let print_instrs instrs =
 
 let load_file name =
   let tree = Parser.input Lexer.token (Lexing.from_channel (if name = "-" then stdin else open_in name)) in
-  let shred = Compile.compile Vm.Context.empty tree in (* TODO: get context and stuff from VM for globals *)
+  let shred = Compile.compile Interpret.Context.empty tree in (* TODO: get context and stuff from VM for globals *)
   if !arg_print_instrs then print_instrs (shred_instructions shred);
   shred
 

@@ -42,6 +42,7 @@ type instruction =
 | IPreDec of string | IPostDec of string
 | IYield
 
+(* return type * argument types * instructions *)
 type func = typ * typ list * instruction list
 
 (* TODO: classes *)

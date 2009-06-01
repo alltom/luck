@@ -28,9 +28,7 @@ type context = typ Context.t
 
 type instruction =
   IPushEnv of context | IPopEnv
-| IPush of data
-| IDiscard
-| IPushVar of string
+| IPush of data | IPushVar of string | IDiscard
 | IAssign of string (* puts top stack value in variable with given name; leaves value on stack *)
 | IBranch of instruction list * instruction list (* if true body, if false body *)
 | IWhile of instruction list (* body instructions *)

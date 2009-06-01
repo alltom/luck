@@ -1,5 +1,5 @@
 
-open Compile
+open Compiler
 open Interpret
 open Vm
 
@@ -22,7 +22,7 @@ let print_instrs instrs =
 
 let load_file name =
   let tree = Parser.input Lexer.token (Lexing.from_channel (if name = "-" then stdin else open_in name)) in
-  let shred = Compile.compile Interpret.Context.empty tree in (* TODO: get context and stuff from VM for globals *)
+  let shred = compile Context.empty tree in (* TODO: get context and stuff from VM for globals *)
   if !arg_print_instrs then print_instrs (shred_instructions shred);
   shred
 
@@ -41,7 +41,7 @@ let main () =
     Parsing.Parse_error -> prerr_endline ("parse error"); exit 1
   | Compile_error msg -> prerr_endline ("compile error: " ^ msg); exit 1
   | Compiler_error msg -> prerr_endline ("compiler error: " ^ msg); exit 1
-  | Compile.Not_implemented msg
+  | Compiler.Not_implemented msg
   | Vm.Not_implemented msg -> prerr_endline ("not implemented: " ^ msg); exit 1
 
 let _ = main ()

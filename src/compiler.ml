@@ -16,6 +16,11 @@ let builtin_context =
     [("now", TimeType); ("samp", DurType); ("second", DurType)]
 let builtin_type name = Context.find name builtin_context
 let is_builtin name = Context.mem name builtin_context
+let raise_if_reserved name =
+  if is_builtin name then
+    raise (Compile_error ("redeclaration of reserved variable " ^ name))
+  else
+    name
 
 let rec typ_of_asttype asttype =
   match asttype with
@@ -25,15 +30,8 @@ let rec typ_of_asttype asttype =
   | Type("dur", false, _, []) -> DurType
   | _ -> raise (Not_implemented "cannot yet convert this data type")
 
-(* raises an compile exception if the given variable name is reserved (ex: now, second, ...) *)
-let raise_if_reserved name =
-  if is_builtin name then
-    raise (Compile_error ("redeclaration of reserved variable " ^ name))
-  else
-    name
-
 (* returns a context from a list of declarations *)
-let rec build_context decls =
+let rec context_of_decls decls =
   let rec loop cntxt decls =
     match decls with
       (name, t) :: rest -> loop (Context.add (raise_if_reserved name) (typ_of_asttype t) cntxt) rest
@@ -109,7 +107,7 @@ let rec extract_expr_cntxt expr =
   | Subscript (e1, e2) -> binary_helper e1 e2 (fun e1' e2' -> Subscript(e1', e2'))
   | Time (e1, e2) -> binary_helper e1 e2 (fun e1' e2' -> Time(e1', e2'))
   | Declaration decls ->
-      let c = build_context decls in
+      let c = context_of_decls decls in
       (match decls with
          (name, _) :: [] -> (c, Var name)
        | _ -> (c, Array(List.map (fun (name, _) -> Var name) decls)))

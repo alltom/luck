@@ -11,8 +11,6 @@ let error msg = raise (Machine_error msg)
     Context.empty
     builtin_variables *)
 
-type shred_template = context * func list * instruction list
-
 (* returns the instructions from a shred template *)
 let shred_instructions (_, _, instrs) = instrs
 

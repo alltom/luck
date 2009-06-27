@@ -45,7 +45,13 @@ type instruction =
 (* return type * argument types * instructions *)
 type func = typ * typ list * instruction list
 
-(* TODO: classes *)
+(* TODO *)
+type clas = unit
+
+type shred_template = context * func list * instruction list
+type function_template = typ list * instruction list
+type class_template = instruction list * function_template list * context
+
 module Env =
   struct
     module StringMap = Map.Make(String)

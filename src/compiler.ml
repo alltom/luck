@@ -46,12 +46,6 @@ let add_context overwrite cntxt_base cntxt_new =
   in
   Context.fold add cntxt_new cntxt_base
 
-let combine_cntxt_list overwrite lst =
-  List.fold_left
-    (fun c c' -> add_context overwrite c c')
-    Context.empty
-    lst
-
 (* given a list of, say exprs, extracts context from them all using
    extractf, returning a tuple of the context and the array of extracted
    expressions *)
@@ -300,8 +294,15 @@ let rec compile_stmt parent_cntxt local_cntxt stmt =
         let (_, incr_instrs) = compile_expr cntxt incr in
 
         let (body_cntxt, body_instrs) = compile_stmts cntxt stmts in
+        
+        let new_cntxt =
+          List.fold_left
+            (fun c c' -> add_context false c c')
+            Context.empty
+            [init_cntxt; cond_cntxt; incr_cntxt; body_cntxt]
+        in
 
-        [IPushEnv (combine_cntxt_list false [init_cntxt; cond_cntxt; incr_cntxt; body_cntxt])]
+        [IPushEnv new_cntxt]
           @ init_instrs @ [IDiscard]
           @ cond_instrs
           @ (cast cond_type BoolType)

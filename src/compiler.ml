@@ -30,29 +30,25 @@ let rec typ_of_asttype asttype =
   | Type("dur", false, _, []) -> DurType
   | _ -> raise (Not_implemented "cannot yet convert this data type")
 
-(* returns a context from a list of declarations *)
 let rec context_of_decls decls =
-  let rec loop cntxt decls =
-    match decls with
-      (name, t) :: rest -> loop (Context.add (raise_if_reserved name) (typ_of_asttype t) cntxt) rest
+  let rec loop cntxt = function
+      (name, t) :: rest ->
+        loop (Context.add (raise_if_reserved name) (typ_of_asttype t) cntxt) rest
     | [] -> cntxt
   in loop Context.empty decls
 
-(* if overwrite is true, variables in c2 overwrite those in c1.
-   otherwise, an exception is thrown if the same variable is
-   defined in both contexts *)
-let combine_cntxts overwrite c1 c2 =
+let add_context overwrite cntxt_base cntxt_new =
   let add name entry c' =
     if not overwrite && (Context.mem name c') then
       raise (Compile_error ("redeclaration of " ^ name))
     else
       Context.add name entry c'
   in
-  Context.fold add c2 c1
+  Context.fold add cntxt_new cntxt_base
 
 let combine_cntxt_list overwrite lst =
   List.fold_left
-    (fun c c' -> combine_cntxts overwrite c c')
+    (fun c c' -> add_context overwrite c c')
     Context.empty
     lst
 
@@ -65,7 +61,7 @@ let extract_list_cntxt lst extractf =
   List.iter
     (fun e ->
        let (c', e') = extractf e in
-       cntxt := combine_cntxts false !cntxt c';
+       cntxt := add_context false !cntxt c';
        exprs := !exprs @ [e'])
     lst;
   (!cntxt, !exprs)
@@ -83,13 +79,13 @@ let rec extract_expr_cntxt expr =
   let binary_helper e1 e2 f =
     let (c1, e1') = extract_expr_cntxt e1 in
     let (c2, e2') = extract_expr_cntxt e2 in
-    ((combine_cntxts false c1 c2), f e1' e2')
+    ((add_context false c1 c2), f e1' e2')
   in
   let trinary_helper e1 e2 e3 f =
     let (c1, e1') = extract_expr_cntxt e1 in
     let (c2, e2') = extract_expr_cntxt e2 in
     let (c3, e3') = extract_expr_cntxt e3 in
-    ((combine_cntxts false c1 (combine_cntxts false c2 c3)), f e1' e2' e3')
+    ((add_context false c1 (add_context false c2 c3)), f e1' e2' e3')
   in
   match expr with
     Array exps -> let (c, exps') = extract_list_cntxt exps extract_expr_cntxt in (c, Array exps')
@@ -100,7 +96,7 @@ let rec extract_expr_cntxt expr =
   | FunCall (e1, args) ->
       let (c1, e1') = extract_expr_cntxt e1 in
       let (c2, args') = extract_list_cntxt args extract_expr_cntxt in
-      (combine_cntxts false c1 c2, FunCall(e1', args'))
+      (add_context false c1 c2, FunCall(e1', args'))
   | Cast (e1, t) -> unary_helper e1 (fun e1' -> Cast (e1', t))
   | Spork e1 -> unary_helper e1 (fun e1' -> Spork e1')
   | Trinary (e1, e2, e3) -> trinary_helper e1 e2 e3 (fun e1' e2' e3' -> Trinary(e1', e2', e3'))
@@ -250,15 +246,15 @@ let rec compile_expr cntxt expr =
 (* when a statement finishes executing, the stack should be how it was before *)
 let rec compile_stmt parent_cntxt local_cntxt stmt =
   let (subcntxt, stmt') = extract_stmt_cntxt stmt in
-  let this_context = combine_cntxts false local_cntxt subcntxt in
-  let cntxt = combine_cntxts true parent_cntxt this_context in
+  let this_context = add_context false local_cntxt subcntxt in
+  let cntxt = add_context true parent_cntxt this_context in
   let instrs =
     match stmt' with
       NullStatement -> []
     | ExprStatement e -> let (t, i) = compile_expr cntxt e in i @ [IDiscard]
     | If (cond, s1, s2) ->
         let (cond_cntxt, cond) = extract_expr_cntxt cond in
-        let cntxt = combine_cntxts true cntxt cond_cntxt in
+        let cntxt = add_context true cntxt cond_cntxt in
         let (tc, ic) = compile_expr cntxt cond in
         let (iftrue_cntxt, iftrue_instrs) = compile_stmts cntxt s1 in
         let (iffalse_cntxt, iffalse_instrs) = compile_stmts cntxt s2 in
@@ -270,21 +266,21 @@ let rec compile_stmt parent_cntxt local_cntxt stmt =
           @ [IPopEnv]
     | While (cond, stmts) ->
         let (cond_cntxt, cond) = extract_expr_cntxt cond in
-        let cntxt = combine_cntxts true cntxt cond_cntxt in
+        let cntxt = add_context true cntxt cond_cntxt in
         let (tc, ic) = compile_expr cntxt cond in
         let (body_cntxt, body_instrs) = compile_stmts cntxt stmts in
-        [IPushEnv (combine_cntxts false cond_cntxt body_cntxt)]
+        [IPushEnv (add_context false cond_cntxt body_cntxt)]
           @ ic
           @ (cast tc BoolType)
           @ [IWhile (body_instrs @ ic @ (cast tc BoolType))]
           @ [IPopEnv]
     | Repeat (cond, stmts) ->
         let (cond_cntxt, cond) = extract_expr_cntxt cond in
-        let cntxt = combine_cntxts true cntxt cond_cntxt in
+        let cntxt = add_context true cntxt cond_cntxt in
         let (tc, ic) = compile_expr cntxt cond in
         let (body_cntxt, body_instrs) = compile_stmts cntxt stmts in
         if tc = IntType then
-          [IPushEnv (combine_cntxts false cond_cntxt body_cntxt)]
+          [IPushEnv (add_context false cond_cntxt body_cntxt)]
             @ ic
             @ [IRepeat body_instrs]
             @ [IPopEnv]
@@ -292,15 +288,15 @@ let rec compile_stmt parent_cntxt local_cntxt stmt =
           raise (Compile_error ("argument in repeat must be int, not " ^ (string_of_type tc)))
     | For (init, cond, incr, stmts) ->
         let (init_cntxt, init) = extract_expr_cntxt init in
-        let cntxt = combine_cntxts true cntxt init_cntxt in
+        let cntxt = add_context true cntxt init_cntxt in
         let (_, init_instrs) = compile_expr cntxt init in
 
         let (cond_cntxt, cond) = extract_expr_cntxt cond in
-        let cntxt = combine_cntxts false cntxt cond_cntxt in
+        let cntxt = add_context false cntxt cond_cntxt in
         let (cond_type, cond_instrs) = compile_expr cntxt cond in
 
         let (incr_cntxt, incr) = extract_expr_cntxt incr in
-        let cntxt = combine_cntxts false cntxt incr_cntxt in
+        let cntxt = add_context false cntxt incr_cntxt in
         let (_, incr_instrs) = compile_expr cntxt incr in
 
         let (body_cntxt, body_instrs) = compile_stmts cntxt stmts in
@@ -323,7 +319,7 @@ compile_stmts parent_cntxt stmts =
   let local_cntxt = ref Context.empty in
   let compile_stmt instrs stmt =
     let (cntxt', instrs') = compile_stmt parent_cntxt !local_cntxt stmt in
-    local_cntxt := combine_cntxts false !local_cntxt cntxt';
+    local_cntxt := add_context false !local_cntxt cntxt';
     instrs @ instrs'
   in
   (!local_cntxt, List.fold_left compile_stmt [] stmts)

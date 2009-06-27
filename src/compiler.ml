@@ -9,12 +9,13 @@ exception Not_implemented of string
 
 let undeclared var = raise (Compile_error ("use of undeclared variable " ^ var))
 
-let builtin_variables = [("samp", DurType); ("now", TimeType)]
-let builtin_type name =
-  let _, t = List.find (fun (name', t) -> name = name') builtin_variables in
-  t
-let is_builtin name =
-  List.exists (fun (name', _) -> name' = name) builtin_variables
+let builtin_context =
+  List.fold_left
+    (fun cntxt (name, typ) -> Context.add name typ cntxt)
+    Context.empty
+    [("now", TimeType); ("samp", DurType); ("second", DurType)]
+let builtin_type name = Context.find name builtin_context
+let is_builtin name = Context.mem name builtin_context
 
 let rec typ_of_asttype asttype =
   match asttype with

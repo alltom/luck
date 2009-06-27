@@ -46,20 +46,6 @@ let add_context overwrite cntxt_base cntxt_new =
   in
   Context.fold add cntxt_new cntxt_base
 
-(* given a list of, say exprs, extracts context from them all using
-   extractf, returning a tuple of the context and the array of extracted
-   expressions *)
-let extract_list_cntxt lst extractf =
-  let cntxt = ref Context.empty in
-  let exprs = ref [] in
-  List.iter
-    (fun e ->
-       let (c', e') = extractf e in
-       cntxt := add_context false !cntxt c';
-       exprs := !exprs @ [e'])
-    lst;
-  (!cntxt, !exprs)
-
 (* extracts declarations from expr, returning a context with the
   declared variables and an expr with declarations replaced by the
   variables themselves.
@@ -82,14 +68,14 @@ let rec extract_expr_cntxt expr =
     ((add_context false c1 (add_context false c2 c3)), f e1' e2' e3')
   in
   match expr with
-    Array exps -> let (c, exps') = extract_list_cntxt exps extract_expr_cntxt in (c, Array exps')
-  | Comma exps -> let (c, exps') = extract_list_cntxt exps extract_expr_cntxt in (c, Comma exps')
+    Array exps -> let (c, exps') = extract_list_context exps in (c, Array exps')
+  | Comma exps -> let (c, exps') = extract_list_context exps in (c, Comma exps')
   | UnaryExpr (op, e1) -> unary_helper e1 (fun e1' -> UnaryExpr(op, e1'))
   | BinaryExpr (op, e1, e2) -> binary_helper e1 e2 (fun e1' e2' -> BinaryExpr(op, e1', e2'))
   | Member (e1, m) -> unary_helper e1 (fun e1' -> Member(e1', m))
   | FunCall (e1, args) ->
       let (c1, e1') = extract_expr_cntxt e1 in
-      let (c2, args') = extract_list_cntxt args extract_expr_cntxt in
+      let (c2, args') = extract_list_context args in
       (add_context false c1 c2, FunCall(e1', args'))
   | Cast (e1, t) -> unary_helper e1 (fun e1' -> Cast (e1', t))
   | Spork e1 -> unary_helper e1 (fun e1' -> Spork e1')
@@ -103,6 +89,15 @@ let rec extract_expr_cntxt expr =
        | _ -> (c, Array(List.map (fun (name, _) -> Var name) decls)))
   | Int _ | Float _ | Bool _ | String _ | Var _ -> (Context.empty, expr)
 
+(* builds a context from a list of expressions *)
+and extract_list_context exprs =
+  List.fold_left
+    (fun (cntxt, fixed_exprs) expr ->
+      let (cntxt', expr') = extract_expr_cntxt expr in
+      (add_context false cntxt cntxt', fixed_exprs @ [expr']))
+    (Context.empty, [])
+    exprs
+
 (* extract declarations from sub-expressions which aren't contained by
    the statement itself. for exaxmple, "int a" would be extracted from
    "<<< 4 => int a >>>" but not from "for(0 => int a;;);". A copy of the statement
@@ -112,7 +107,7 @@ let rec extract_stmt_cntxt stmt =
   match stmt with
     ExprStatement e -> let (c, e') = extract_expr_cntxt e in (c, ExprStatement e')
   | Print args ->
-      let (c, args') = extract_list_cntxt args extract_expr_cntxt in
+      let (c, args') = extract_list_context args in
       (c, Print args')
   | _ -> (Context.empty, stmt)
 

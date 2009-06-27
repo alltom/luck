@@ -48,11 +48,7 @@ let add_context overwrite cntxt_base cntxt_new =
   in
   Context.fold add cntxt_new cntxt_base
 
-(* extracts declarations from expr, returning a context with the
-  declared variables and an expr with declarations replaced by the
-  variables themselves.
-     "int a" becomes "a"
-     "int a[], b" becomes "a, b" *)
+(* expr => context * expr_without_declarations *)
 let rec extract_expr_context expr =
   let recurse exprs f =
     let cntxt, exprs' = extract_list_context exprs in
@@ -86,17 +82,10 @@ and extract_list_context exprs =
     (Context.empty, [])
     exprs
 
-(* extract declarations from sub-expressions which aren't contained by
-   the statement itself. for exaxmple, "int a" would be extracted from
-   "<<< 4 => int a >>>" but not from "for(0 => int a;;);". A copy of the statement
-   with used declarations removed is also returned. For example: "<<< 4 => int a >>>"
-   becomes "<<< 4 => a >>>". *)
-let rec extract_stmt_cntxt stmt =
+let rec extract_stmt_context stmt =
   match stmt with
     ExprStatement e -> let (c, e') = extract_expr_context e in (c, ExprStatement e')
-  | Print args ->
-      let (c, args') = extract_list_context args in
-      (c, Print args')
+  | Print args -> let (c, args') = extract_list_context args in (c, Print args')
   | _ -> (Context.empty, stmt)
 
 (* returns the type which best covers t1 and t2 *)
@@ -222,7 +211,7 @@ let rec compile_expr cntxt expr =
 
 (* when a statement finishes executing, the stack should be how it was before *)
 let rec compile_stmt parent_cntxt local_cntxt stmt =
-  let (subcntxt, stmt') = extract_stmt_cntxt stmt in
+  let (subcntxt, stmt') = extract_stmt_context stmt in
   let this_context = add_context false local_cntxt subcntxt in
   let cntxt = add_context true parent_cntxt this_context in
   let instrs =

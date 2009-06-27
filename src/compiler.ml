@@ -5,9 +5,11 @@ open Vm
 
 exception Compile_error of string (* something is wrong with the input *)
 exception Compiler_error of string (* something went wrong internally *)
+exception Cant_happen
 exception Not_implemented of string
 
 let undeclared var = raise (Compile_error ("use of undeclared variable " ^ var))
+let cant_happen () = raise Cant_happen
 
 let builtin_context =
   List.fold_left
@@ -51,49 +53,35 @@ let add_context overwrite cntxt_base cntxt_new =
   variables themselves.
      "int a" becomes "a"
      "int a[], b" becomes "a, b" *)
-let rec extract_expr_cntxt expr =
-  let unary_helper e1 f =
-    let (c, e') = extract_expr_cntxt e1 in
-    (c, f e')
-  in
-  let binary_helper e1 e2 f =
-    let (c1, e1') = extract_expr_cntxt e1 in
-    let (c2, e2') = extract_expr_cntxt e2 in
-    ((add_context false c1 c2), f e1' e2')
-  in
-  let trinary_helper e1 e2 e3 f =
-    let (c1, e1') = extract_expr_cntxt e1 in
-    let (c2, e2') = extract_expr_cntxt e2 in
-    let (c3, e3') = extract_expr_cntxt e3 in
-    ((add_context false c1 (add_context false c2 c3)), f e1' e2' e3')
+let rec extract_expr_context expr =
+  let recurse exprs f =
+    let cntxt, exprs' = extract_list_context exprs in
+    (cntxt, f exprs')
   in
   match expr with
-    Array exps -> let (c, exps') = extract_list_context exps in (c, Array exps')
-  | Comma exps -> let (c, exps') = extract_list_context exps in (c, Comma exps')
-  | UnaryExpr (op, e1) -> unary_helper e1 (fun e1' -> UnaryExpr(op, e1'))
-  | BinaryExpr (op, e1, e2) -> binary_helper e1 e2 (fun e1' e2' -> BinaryExpr(op, e1', e2'))
-  | Member (e1, m) -> unary_helper e1 (fun e1' -> Member(e1', m))
-  | FunCall (e1, args) ->
-      let (c1, e1') = extract_expr_cntxt e1 in
-      let (c2, args') = extract_list_context args in
-      (add_context false c1 c2, FunCall(e1', args'))
-  | Cast (e1, t) -> unary_helper e1 (fun e1' -> Cast (e1', t))
-  | Spork e1 -> unary_helper e1 (fun e1' -> Spork e1')
-  | Trinary (e1, e2, e3) -> trinary_helper e1 e2 e3 (fun e1' e2' e3' -> Trinary(e1', e2', e3'))
-  | Subscript (e1, e2) -> binary_helper e1 e2 (fun e1' e2' -> Subscript(e1', e2'))
-  | Time (e1, e2) -> binary_helper e1 e2 (fun e1' e2' -> Time(e1', e2'))
+    Array exprs -> recurse exprs (fun exprs' -> Array exprs')
+  | Comma exprs -> recurse exprs (fun exprs' -> Comma exprs')
+  | UnaryExpr (op, e1) -> recurse [e1] (function [e1'] -> UnaryExpr(op, e1') | _ -> cant_happen ())
+  | BinaryExpr (op, e1, e2) -> recurse [e1; e2] (function [e1'; e2'] -> BinaryExpr(op, e1', e2') | _ -> cant_happen ())
+  | Member (e1, m) -> recurse [e1] (function [e1'] -> Member(e1', m) | _ -> cant_happen ())
+  | FunCall (e1, args) -> recurse ([e1] @ args) (function e1'::args' -> FunCall(e1', args') | _ -> cant_happen ())
+  | Cast (e1, t) -> recurse [e1] (function [e1'] -> Cast(e1', t) | _ -> cant_happen ())
+  | Spork e1 -> recurse [e1] (function [e1'] -> Spork e1' | _ -> cant_happen ())
+  | Trinary (e1, e2, e3) -> recurse [e1; e2; e3] (function [e1'; e2'; e3'] -> Trinary(e1', e2', e3') | _ -> cant_happen ())
+  | Subscript (e1, e2) -> recurse [e1; e2] (function [e1'; e2'] -> Subscript(e1', e2') | _ -> cant_happen ())
+  | Time (e1, e2) -> recurse [e1; e2] (function [e1'; e2'] -> Time(e1', e2') | _ -> cant_happen ())
+  | Int _ | Float _ | Bool _ | String _ | Var _ -> (Context.empty, expr)
   | Declaration decls ->
       let c = context_of_decls decls in
       (match decls with
          (name, _) :: [] -> (c, Var name)
        | _ -> (c, Array(List.map (fun (name, _) -> Var name) decls)))
-  | Int _ | Float _ | Bool _ | String _ | Var _ -> (Context.empty, expr)
 
 (* builds a context from a list of expressions *)
 and extract_list_context exprs =
   List.fold_left
     (fun (cntxt, fixed_exprs) expr ->
-      let (cntxt', expr') = extract_expr_cntxt expr in
+      let (cntxt', expr') = extract_expr_context expr in
       (add_context false cntxt cntxt', fixed_exprs @ [expr']))
     (Context.empty, [])
     exprs
@@ -105,7 +93,7 @@ and extract_list_context exprs =
    becomes "<<< 4 => a >>>". *)
 let rec extract_stmt_cntxt stmt =
   match stmt with
-    ExprStatement e -> let (c, e') = extract_expr_cntxt e in (c, ExprStatement e')
+    ExprStatement e -> let (c, e') = extract_expr_context e in (c, ExprStatement e')
   | Print args ->
       let (c, args') = extract_list_context args in
       (c, Print args')
@@ -242,7 +230,7 @@ let rec compile_stmt parent_cntxt local_cntxt stmt =
       NullStatement -> []
     | ExprStatement e -> let (t, i) = compile_expr cntxt e in i @ [IDiscard]
     | If (cond, s1, s2) ->
-        let (cond_cntxt, cond) = extract_expr_cntxt cond in
+        let (cond_cntxt, cond) = extract_expr_context cond in
         let cntxt = add_context true cntxt cond_cntxt in
         let (tc, ic) = compile_expr cntxt cond in
         let (iftrue_cntxt, iftrue_instrs) = compile_stmts cntxt s1 in
@@ -254,7 +242,7 @@ let rec compile_stmt parent_cntxt local_cntxt stmt =
                       [IPushEnv iffalse_cntxt] @ iffalse_instrs)]
           @ [IPopEnv]
     | While (cond, stmts) ->
-        let (cond_cntxt, cond) = extract_expr_cntxt cond in
+        let (cond_cntxt, cond) = extract_expr_context cond in
         let cntxt = add_context true cntxt cond_cntxt in
         let (tc, ic) = compile_expr cntxt cond in
         let (body_cntxt, body_instrs) = compile_stmts cntxt stmts in
@@ -264,7 +252,7 @@ let rec compile_stmt parent_cntxt local_cntxt stmt =
           @ [IWhile (body_instrs @ ic @ (cast tc BoolType))]
           @ [IPopEnv]
     | Repeat (cond, stmts) ->
-        let (cond_cntxt, cond) = extract_expr_cntxt cond in
+        let (cond_cntxt, cond) = extract_expr_context cond in
         let cntxt = add_context true cntxt cond_cntxt in
         let (tc, ic) = compile_expr cntxt cond in
         let (body_cntxt, body_instrs) = compile_stmts cntxt stmts in
@@ -276,15 +264,15 @@ let rec compile_stmt parent_cntxt local_cntxt stmt =
         else
           raise (Compile_error ("argument in repeat must be int, not " ^ (string_of_type tc)))
     | For (init, cond, incr, stmts) ->
-        let (init_cntxt, init) = extract_expr_cntxt init in
+        let (init_cntxt, init) = extract_expr_context init in
         let cntxt = add_context true cntxt init_cntxt in
         let (_, init_instrs) = compile_expr cntxt init in
 
-        let (cond_cntxt, cond) = extract_expr_cntxt cond in
+        let (cond_cntxt, cond) = extract_expr_context cond in
         let cntxt = add_context false cntxt cond_cntxt in
         let (cond_type, cond_instrs) = compile_expr cntxt cond in
 
-        let (incr_cntxt, incr) = extract_expr_cntxt incr in
+        let (incr_cntxt, incr) = extract_expr_context incr in
         let cntxt = add_context false cntxt incr_cntxt in
         let (_, incr_instrs) = compile_expr cntxt incr in
 

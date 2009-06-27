@@ -12,8 +12,9 @@
 #    exit 1
 
 
-NATIVE_ENABLED = false
-BYTE_ENABLED = true
+NATIVE_ENABLED = true
+BYTE_ENABLED = false
+#OCAMLOPT = true
 
 # OCAMLINCLUDES +=
 # OCAMLFLAGS    +=

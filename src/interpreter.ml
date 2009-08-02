@@ -68,13 +68,13 @@ module Env =
 (* instruction lists are popped and pushed in blocks called frames
    as functions are called, loops entered, etc *)
 type frame_type =
-  Frame
+  TopLevelFrame
+| FunCallFrame
 | WhileFrame of instruction list (* body of loop *)
 | RepeatFrame of int * instruction list
-type frame = frame_type * instruction list
 type env_stack = (Env.environment list) list
 type stack = data list
-type execution_state = frame list * stack * env_stack
+type frame = Frame of frame_type * instruction list * stack * env_stack * frame | NilFrame
 
 (* STRING CONVERSIONS *)
 
@@ -233,7 +233,10 @@ let exec_binop instr stck =
   result :: stck
 
 (* executes a single instruction *)
-let exec instr (frms : frame list) (stck : stack) (envs : env_stack) =
+let exec = function
+  NilFrame -> NilFrame
+| Frame (typ, instrs, stack, envs, parent) -> NilFrame
+(* instr (frms : frame list) (stck : stack) (envs : env_stack) =
   match instr with
     IPushEnv cntxt -> (frms, stck, push_env (inst_context cntxt) envs)
   | IPopEnv ->
@@ -286,12 +289,16 @@ let exec instr (frms : frame list) (stck : stack) (envs : env_stack) =
               | _ -> error "cannot happen")
            in slot := IntData newval; (frms, (IntData retval) :: stck, envs)
        | _ -> error ("incr/decr applied to invalid data type, " ^ (string_of_type (type_of_data !slot))))
-  | IYield -> error "run_til_yield passed IYield to exec"
+  | IYield -> error "run_til_yield passed IYield to exec" *)
 
 (* executes instructions in the given environments until it yields or finishes *)
 (* returns the number of samples yielded and the new execution state *)
-let rec run_til_yield (state : execution_state) =
-  match state with
+let rec run_til_yield frame =
+  match frame with
+    NilFrame -> None
+  | Frame (typ, instrs, stack, envs, parent) ->
+      Some (0.0, Frame (typ, instrs, stack, envs, parent))
+  (* match state with
     ([], [], _) -> None
   | ((ft, IYield::is) :: frms, stck, envs) -> let d, stck = pop_dur stck in Some (d, ((ft, is) :: frms, (TimeData 0.0 (* HACK *)) :: stck, envs))
   | ((ft, i::is) :: frms, stck, envs) -> run_til_yield (exec i ((ft, is)::frms) stck envs)
@@ -310,4 +317,4 @@ let rec run_til_yield (state : execution_state) =
   | (frms, stck, envs) -> error ("invalid machine state: "
                                  ^ (string_of_int (List.length frms)) ^ " frames, "
                                  ^ (string_of_int (List.length stck)) ^ " items on stack, "
-                                 ^ (string_of_int (List.length envs)) ^ " envs")
+                                 ^ (string_of_int (List.length envs)) ^ " envs") *)

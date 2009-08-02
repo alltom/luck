@@ -16,7 +16,7 @@ let shred_instructions (_, _, instrs) = instrs
 
 module Shred =
   struct
-    type shred = time * execution_state
+    type shred = time * frame
     let shred now state = (now, state)
     let now shred = let (now, _) = shred in now
     let state shred = let (_, state) = shred in state
@@ -30,7 +30,7 @@ module VM =
     type vm = time * Shred.shred Priority_queue.queue (* now, shreds *)
     let fresh = (0.0, Priority_queue.empty)
     let add (now, q) (cntxt, funcs, instrs) =
-      let shred = Shred.shred now ([(Frame, instrs)], [], [(inst_context cntxt) :: [(* TODO: global VM env *)]]) in
+      let shred = Shred.shred now (Frame (TopLevelFrame, instrs, [], [(inst_context cntxt) :: [(* TODO: global VM env *)]], NilFrame)) in
       (now, Priority_queue.insert q now shred)
     let re_add (now, q) shred = (now, Priority_queue.insert q (Shred.now shred) shred)
     let set_time (now, q) time = (time, q)

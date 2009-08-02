@@ -24,6 +24,13 @@ let raise_if_reserved name =
   else
     name
 
+(* checks given context and built-ins for the type of a variable name *)
+let get_type cntxt name =
+  if is_builtin name then
+    builtin_type name
+  else
+    Context.find name cntxt
+
 let rec typ_of_asttype asttype =
   match asttype with
     Type("int", false, _, []) -> IntType
@@ -101,7 +108,9 @@ let rec promote_type t1 t2 =
   | (StringType, _) | (_, StringType) -> StringType
   | (FloatType, _) | (_, FloatType) -> FloatType
   | (IntType, _) | (_, IntType) -> IntType
-  | _ -> fail ()
+  | (TimeType, _) | (_, TimeType)
+  | (DurType, _) | (_, DurType)
+  | (BoolType, _) -> fail ()
 
 let cast a b =
   if a = b then
@@ -116,21 +125,13 @@ let cast a b =
     | (BoolType, FloatType) -> [ICast b]
     | _ -> raise (Compile_error ("cannot convert from " ^ (string_of_type a) ^ " to " ^ (string_of_type b)))
 
-(* TODO: add cast before assignment *)
-(* TODO: check variables for existence *)
-(* when an expression finishes executing, there should be one more value on the stack *)
 let rec compile_expr cntxt expr =
   match expr with
     Int i -> IntType, [IPush (IntData i)]
   | Float f -> FloatType, [IPush (FloatData f)]
   | Bool b -> BoolType, [IPush (BoolData b)]
   | String s -> StringType, [IPush (StringData s)]
-  | Var name ->
-      if is_builtin name then
-        (builtin_type name, [IPushVar name])
-      else
-        let t = (try Context.find name cntxt with Not_found -> undeclared name) in
-        (t, [IPushVar name])
+  | Var name -> (try (get_type cntxt name, [IPushVar name]) with Not_found -> undeclared name)
   | Array exprs -> raise (Not_implemented "cannot compile array expressions")
   | Comma exprs -> List.fold_left (fun (t, instrs) e -> let (t, i) = compile_expr cntxt e in (t, instrs @ [IDiscard] @ i)) (BoolType, [IPush (BoolData false)]) exprs (* TODO: doity *)
   | UnaryExpr (PreInc as op, Var v)
@@ -157,41 +158,52 @@ let rec compile_expr cntxt expr =
       (match t with
          DurType -> (TimeType, i @ [IYield])
        | _ -> raise (Compile_error ("cannot chuck " ^ (string_of_type t) ^ " to now")))
-  | BinaryExpr (Chuck, e, Var v) -> let t, i = compile_expr cntxt e in (t, i @ [(* TODO: cast *)] @ [IAssign v])
+  | BinaryExpr (Chuck, e, Var v) ->
+      let t, i = compile_expr cntxt e in
+      (t, i @ (cast t (get_type cntxt v)) @ [IAssign v])
   | BinaryExpr (op, e1, e2) ->
       let (t1, i1) = compile_expr cntxt e1 in
       let (t2, i2) = compile_expr cntxt e2 in
       let instrs_n_casts t = i1 @ (cast t1 t) @ i2 @ (cast t2 t) in
       (match (op, t1, t2) with
          (Plus, IntType, IntType) -> (IntType, (instrs_n_casts IntType) @ [IAdd])
-       | (Plus, FloatType, FloatType) -> (FloatType, (instrs_n_casts FloatType) @ [IAdd])
-       | (Plus, IntType, FloatType) -> (FloatType, (instrs_n_casts FloatType) @ [IAdd])
+       | (Plus, FloatType, FloatType)
+       | (Plus, IntType, FloatType)
        | (Plus, FloatType, IntType) -> (FloatType, (instrs_n_casts FloatType) @ [IAdd])
+       
        | (Minus, IntType, IntType) -> (IntType, (instrs_n_casts IntType) @ [ISubtract])
-       | (Minus, FloatType, FloatType) -> (FloatType, (instrs_n_casts FloatType) @ [ISubtract])
-       | (Minus, IntType, FloatType) -> (FloatType, (instrs_n_casts FloatType) @ [ISubtract])
+       | (Minus, FloatType, FloatType)
+       | (Minus, IntType, FloatType)
        | (Minus, FloatType, IntType) -> (FloatType, (instrs_n_casts FloatType) @ [ISubtract])
+       
        | (Multiply, IntType, IntType) -> (IntType, (instrs_n_casts IntType) @ [IMultiply])
-       | (Multiply, FloatType, FloatType) -> (FloatType, (instrs_n_casts FloatType) @ [IMultiply])
-       | (Multiply, IntType, FloatType) -> (FloatType, (instrs_n_casts FloatType) @ [IMultiply])
+       | (Multiply, FloatType, FloatType)
+       | (Multiply, IntType, FloatType)
        | (Multiply, FloatType, IntType) -> (FloatType, (instrs_n_casts FloatType) @ [IMultiply])
+       
        | (Divide, IntType, IntType) -> (IntType, (instrs_n_casts IntType) @ [IDivide])
-       | (Divide, FloatType, FloatType) -> (FloatType, (instrs_n_casts FloatType) @ [IDivide])
-       | (Divide, IntType, FloatType) -> (FloatType, (instrs_n_casts FloatType) @ [IDivide])
+       | (Divide, FloatType, FloatType)
+       | (Divide, IntType, FloatType)
        | (Divide, FloatType, IntType) -> (FloatType, (instrs_n_casts FloatType) @ [IDivide])
+       
        | (LessThan, IntType, IntType) -> (BoolType, (instrs_n_casts IntType) @ [ILessThan])
-       | (LessThan, FloatType, FloatType) -> (BoolType, (instrs_n_casts FloatType) @ [ILessThan])
-       | (LessThan, IntType, FloatType) -> (BoolType, (instrs_n_casts FloatType) @ [ILessThan])
+       | (LessThan, FloatType, FloatType)
+       | (LessThan, IntType, FloatType)
        | (LessThan, FloatType, IntType) -> (BoolType, (instrs_n_casts FloatType) @ [ILessThan])
+       
        | (GreaterThan, IntType, IntType) -> (BoolType, (instrs_n_casts IntType) @ [IGreaterThan])
-       | (GreaterThan, FloatType, FloatType) -> (BoolType, (instrs_n_casts FloatType) @ [IGreaterThan])
-       | (GreaterThan, IntType, FloatType) -> (BoolType, (instrs_n_casts FloatType) @ [IGreaterThan])
+       | (GreaterThan, FloatType, FloatType)
+       | (GreaterThan, IntType, FloatType)
        | (GreaterThan, FloatType, IntType) -> (BoolType, (instrs_n_casts FloatType) @ [IGreaterThan])
+       
        | _ -> raise (Not_implemented "cannot compile that binary expression")
        )
   | Member (e1, mem) -> raise (Not_implemented "cannot compile member expressions")
   | FunCall (e1, args) -> raise (Not_implemented "cannot compile function calls")
-  | Cast (e1, t) -> raise (Not_implemented "cannot compile casts")
+  | Cast (e1, t) ->
+      let t1, i1 = compile_expr cntxt e1 in
+      let t2 = typ_of_asttype t in
+      t2, i1 @ (cast t1 t2)
   | Spork e1 -> raise (Not_implemented "cannot compile sporks")
   | Trinary (cond, e1, e2) ->
       let (tc, ic) = compile_expr cntxt cond in

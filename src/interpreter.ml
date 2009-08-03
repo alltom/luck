@@ -6,7 +6,8 @@ let error msg = raise (Machine_error msg)
 type time = float (* duration or time in samples *)
 
 type typ =
-  ArrayType of array_dimension * typ
+  VoidType
+| ArrayType of array_dimension * typ
 | RefType of typ
 | IntType | FloatType | BoolType | StringType | DurType | TimeType
 and array_dimension = Dynamic | Static of int
@@ -34,6 +35,7 @@ type instruction =
 | IWhile of instruction list (* body instructions *)
 | IRepeat of instruction list (* body instructions *)
 | IBreak (* pops a WhileFrame and an environment *)
+| IReturn
 | IPrint of int (* number of things to print (consumes) *)
 | ICast of typ
 | IAdd | ISubtract | IMultiply | IDivide
@@ -69,7 +71,7 @@ module Env =
    as functions are called, loops entered, etc *)
 type frame_type =
   TopLevelFrame
-| FunCallFrame
+| FunCallFrame of typ
 | WhileFrame of instruction list (* body of loop *)
 | RepeatFrame of int * instruction list
 type env_stack = (Env.environment list) list
@@ -78,27 +80,26 @@ type frame = Frame of frame_type * instruction list * stack * env_stack * frame 
 
 (* STRING CONVERSIONS *)
 
-let rec string_of_type t =
-  match t with
-    ArrayType (sz, t') -> (string_of_type t') ^ "[]"
-  | RefType t' -> (string_of_type t') ^ "@"
-  | IntType -> "int"
-  | BoolType -> "bool"
-  | FloatType -> "float"
-  | StringType -> "string"
-  | DurType -> "dur"
-  | TimeType -> "time"
+let rec string_of_type = function
+  VoidType -> "void"
+| ArrayType (sz, t') -> (string_of_type t') ^ "[]"
+| RefType t' -> (string_of_type t') ^ "@"
+| IntType -> "int"
+| BoolType -> "bool"
+| FloatType -> "float"
+| StringType -> "string"
+| DurType -> "dur"
+| TimeType -> "time"
 
-let rec type_of_data d =
-  match d with
-    ArrayData elems -> raise (Not_implemented "type_of_data for arrays")
-  | RefData d' -> RefType (type_of_data !d')
-  | IntData _ -> IntType
-  | BoolData _ -> BoolType
-  | FloatData _ -> FloatType
-  | StringData _ -> StringType
-  | DurData _ -> DurType
-  | TimeData _ -> TimeType
+let rec type_of_data = function
+  ArrayData elems -> raise (Not_implemented "type_of_data for arrays")
+| RefData d' -> RefType (type_of_data !d')
+| IntData _ -> IntType
+| BoolData _ -> BoolType
+| FloatData _ -> FloatType
+| StringData _ -> StringType
+| DurData _ -> DurType
+| TimeData _ -> TimeType
 
 let strings_of_cntxt cntxt =
   Context.fold (fun name (t, d) lst -> ((string_of_type t) ^ " " ^ name) :: lst) cntxt []
@@ -124,6 +125,7 @@ let rec string_of_instruction = function
 | IWhile body -> "while (...) { " ^ (String.concat "; " (List.map string_of_instruction body)) ^ " }"
 | IRepeat body -> "repeat (...) { " ^ (String.concat "; " (List.map string_of_instruction body)) ^ " }"
 | IBreak -> "break"
+| IReturn -> "return"
 | IPrint i -> "print " ^ (string_of_int i)
 | ICast t -> "cast -> " ^ (string_of_type t)
 | IAdd -> "add"
@@ -233,7 +235,7 @@ let exec_binop instr stck =
   result :: stck
 
 (* executes a single instruction *)
-let exec = function
+let exec instr frame = match frame with
   NilFrame -> NilFrame
 | Frame (typ, instrs, stack, envs, parent) -> NilFrame
 (* instr (frms : frame list) (stck : stack) (envs : env_stack) =
@@ -296,25 +298,25 @@ let exec = function
 let rec run_til_yield frame =
   match frame with
     NilFrame -> None
-  | Frame (typ, instrs, stack, envs, parent) ->
-      Some (0.0, Frame (typ, instrs, stack, envs, parent))
-  (* match state with
-    ([], [], _) -> None
-  | ((ft, IYield::is) :: frms, stck, envs) -> let d, stck = pop_dur stck in Some (d, ((ft, is) :: frms, (TimeData 0.0 (* HACK *)) :: stck, envs))
-  | ((ft, i::is) :: frms, stck, envs) -> run_til_yield (exec i ((ft, is)::frms) stck envs)
-  | ((Frame, []) :: frms, stck, envs) -> run_til_yield (frms, stck, envs)
-  | ((WhileFrame body, []) :: frms, stck, envs) ->
-      let (cond, stck) = pop_bool stck in
+  | Frame (typ, IYield :: instrs, stack, envs, parent) ->
+      let d, stack = pop_dur stack in
+      Some (d, Frame(typ, instrs, (TimeData 0.0 (* TODO: now *)) :: stack, envs, parent))
+  | Frame (TopLevelFrame, [], stack, envs, parent) -> None
+  | Frame (FunCallFrame VoidType, [], stack, envs, parent) -> run_til_yield parent
+  | Frame (FunCallFrame _, IReturn :: _, retval :: _, _, Frame (typ', instrs', stack', envs', parent')) ->
+      run_til_yield (Frame (typ', instrs', retval :: stack', envs', parent'))
+  | Frame (FunCallFrame _, [], _, _, _) ->
+      error "reached end of non-void function"
+  | Frame (WhileFrame body, [], stack, envs, parent) ->
+      let (cond, stack) = pop_bool stack in
       if cond then
-        run_til_yield ((WhileFrame body, body) :: frms, stck, envs)
+        run_til_yield (Frame (WhileFrame body, body, stack, envs, parent))
       else
-        run_til_yield (frms, stck, envs)
-  | ((RepeatFrame (times, body), []) :: frms, stck, envs) ->
+        run_til_yield parent
+  | Frame (RepeatFrame (times, body), [], stack, envs, parent) ->
       if times > 0 then
-        run_til_yield ((RepeatFrame (times - 1, body), body) :: frms, stck, envs)
+        run_til_yield (Frame (RepeatFrame (times - 1, body), body, stack, envs, parent))
       else
-        run_til_yield (frms, stck, envs)
-  | (frms, stck, envs) -> error ("invalid machine state: "
-                                 ^ (string_of_int (List.length frms)) ^ " frames, "
-                                 ^ (string_of_int (List.length stck)) ^ " items on stack, "
-                                 ^ (string_of_int (List.length envs)) ^ " envs") *)
+        run_til_yield parent
+  | Frame (typ, i :: instrs, stack, envs, parent) ->
+      run_til_yield (exec i (Frame (typ, instrs, stack, envs, parent)))

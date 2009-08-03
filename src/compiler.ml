@@ -110,7 +110,7 @@ let rec promote_type t1 t2 =
   | (IntType, _) | (_, IntType) -> IntType
   | (TimeType, _) | (_, TimeType)
   | (DurType, _) | (_, DurType)
-  | (BoolType, _) -> fail ()
+  | (BoolType, _) | (VoidType, _) -> fail ()
 
 let cast a b =
   if a = b then

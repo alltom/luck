@@ -33,6 +33,7 @@ module VM =
       let shred = Shred.shred now (Frame (TopLevelFrame, instrs, [], [(inst_context cntxt) :: [(* TODO: global VM env *)]], NilFrame)) in
       (now, Priority_queue.insert q now shred)
     let re_add (now, q) shred = (now, Priority_queue.insert q (Shred.now shred) shred)
+    let global_context vm = Context.empty
     let set_time (now, q) time = (time, q)
     let next_shred (now, q) = let _, shred, q' = Priority_queue.extract q in (shred, (now, q'))
     let running (now, q) = not (Priority_queue.is_empty q)

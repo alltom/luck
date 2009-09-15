@@ -21,8 +21,11 @@ let print_instrs instrs =
   print_endline "---"
 
 let load_file name =
-  let tree = Parser.input Lexer.token (Lexing.from_channel (if name = "-" then stdin else open_in name)) in
-  let shred = compile Context.empty tree in (* TODO: get context and stuff from VM for globals *)
+  let ch = if name = "-" then stdin else open_in name in
+  Parser.input Lexer.token (Lexing.from_channel ch)
+
+let compile global_context tree =
+  let shred = compile global_context tree in
   if !arg_print_instrs then print_instrs (shred_instructions shred);
   shred
 
@@ -31,7 +34,7 @@ let main () =
   try
     if List.length !filenames = 0 then
       (prerr_endline "[luck]: no input files... (try --help)"; exit 1);
-    let vm = List.fold_left (fun vm n -> VM.add vm (load_file n)) VM.fresh !filenames in
+    let vm = List.fold_left (fun vm n -> VM.add vm (compile (VM.global_context vm) (load_file n))) VM.fresh !filenames in
     let rec run vm =
       let vm = VM.run !window_size vm in
       if VM.running vm then run vm else ()

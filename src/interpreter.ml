@@ -235,9 +235,18 @@ let exec_binop instr stck =
   result :: stck
 
 (* executes a single instruction *)
-let exec instr frame = match frame with
-  NilFrame -> NilFrame
+let exec frame = match frame with
+  NilFrame ->
+  NilFrame
+
+| Frame (typ, (IPush d) :: instrs, stack, envs, parent) ->
+  Frame (typ, instrs, d :: stack, envs, parent)
+
+| Frame (typ, (IPrint count) :: instrs, stack, envs, parent) ->
+  Frame(typ, instrs, (print count stack), envs, parent)
+
 | Frame (typ, instrs, stack, envs, parent) -> NilFrame
+
 (* instr (frms : frame list) (stck : stack) (envs : env_stack) =
   match instr with
     IPushEnv cntxt -> (frms, stck, push_env (inst_context cntxt) envs)
@@ -318,5 +327,5 @@ let rec run_til_yield frame =
         run_til_yield (Frame (RepeatFrame (times - 1, body), body, stack, envs, parent))
       else
         run_til_yield parent
-  | Frame (typ, i :: instrs, stack, envs, parent) ->
-      run_til_yield (exec i (Frame (typ, instrs, stack, envs, parent)))
+  | Frame (typ, instrs, stack, envs, parent) ->
+      run_til_yield (exec (Frame (typ, instrs, stack, envs, parent)))

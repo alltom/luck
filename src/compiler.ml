@@ -55,7 +55,7 @@ let add_context overwrite cntxt_base cntxt_new =
   in
   Context.fold add cntxt_new cntxt_base
 
-(* expr => context * expr_without_declarations *)
+(* expr_with_declarations => context * expr_without_declarations *)
 let rec extract_expr_context expr =
   let recurse exprs f =
     let cntxt, exprs' = extract_list_context exprs in
@@ -134,6 +134,7 @@ let rec compile_expr cntxt expr =
   | Var name -> (try (get_type cntxt name, [IPushVar name]) with Not_found -> undeclared name)
   | Array exprs -> raise (Not_implemented "cannot compile array expressions")
   | Comma exprs -> List.fold_left (fun (t, instrs) e -> let (t, i) = compile_expr cntxt e in (t, instrs @ [IDiscard] @ i)) (BoolType, [IPush (BoolData false)]) exprs (* TODO: doity *)
+
   | UnaryExpr (PreInc as op, Var v)
   | UnaryExpr (PostInc as op, Var v)
   | UnaryExpr (PreDec as op, Var v)
@@ -153,6 +154,7 @@ let rec compile_expr cntxt expr =
   | UnaryExpr (PreInc, _) | UnaryExpr (PostInc, _) -> raise (Compile_error ("cannot increment this type of expression"))
   | UnaryExpr (PreDec, _) | UnaryExpr (PostDec, _) -> raise (Compile_error ("cannot decrement this type of expression"))
   | UnaryExpr (op, e1) -> raise (Not_implemented "cannot compile this unary expression")
+
   | BinaryExpr (Chuck, e, Var "now") ->
       let t, i = compile_expr cntxt e in
       (match t with

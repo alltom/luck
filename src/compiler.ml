@@ -34,6 +34,7 @@ let get_type cntxt name =
 let rec typ_of_asttype asttype =
   match asttype with
     Type("int", false, _, []) -> IntType
+  | Type("bool", false, _, []) -> BoolType
   | Type("float", false, _, []) -> FloatType
   | Type("string", false, _, []) -> StringType
   | Type("dur", false, _, []) -> DurType

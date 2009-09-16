@@ -23,15 +23,12 @@ let load_file name =
   let ch = if name = "-" then stdin else open_in name in
   Parser.input Lexer.token (Lexing.from_channel ch)
 
-let compile global_context tree =
-  let shred = compile global_context tree in
-  shred
-
 let main () =
   Arg.parse speclist (fun fname -> filenames := !filenames @ [fname]) usage;
   try
     if List.length !filenames = 0 then
-      (prerr_endline "[luck]: no input files... (try --help)"; exit 1);
+      (prerr_endline "[luck]: no input files... (try --help)";
+       exit 1);
     let vm = List.fold_left
       (fun vm n -> let shred = compile (VM.global_context vm) (load_file n) in
                    if !arg_print_instrs then print_instrs n (shred_instructions shred);

@@ -312,7 +312,18 @@ compile_stmts parent_cntxt stmts =
   in
   (!local_cntxt, List.fold_left compile_stmt [] stmts)
 
+let compile_function cntxt (Function(ret_type, name, decls, stmts)) =
+  let arg_types = List.map (fun (name, t) -> typ_of_asttype t) decls in
+  let arg_cntxt = context_of_decls decls in
+  let fn_cntxt, instrs = compile_stmts (add_context true cntxt arg_cntxt) stmts in
+  let instrs = [IPushEnv fn_cntxt] @ instrs @ [IPopEnv] in
+  (typ_of_asttype ret_type, arg_types, instrs)
+
+let compile_functions cntxt fns =
+  List.fold_left (fun compiled_fns fn -> (compile_function cntxt fn) :: compiled_fns) [] fns
+
 (* returns a tuple: context * functions * instructions *)
 let compile cntxt (fns, classes, stmts) : shred_template =
   let cntxt, instrs = compile_stmts Context.empty stmts in
-  (cntxt, [], instrs)
+  let compiled_fns = compile_functions cntxt fns in
+  (cntxt, compiled_fns, instrs)

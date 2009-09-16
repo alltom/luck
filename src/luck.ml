@@ -14,10 +14,9 @@ let speclist = [
   ("--", Arg.Rest (fun fname -> filenames := !filenames @ [fname]), " files to load (- for stdin)");
 ]
 
-let print_instrs instrs =
-  List.iter
-    (fun i -> print_endline ("\t" ^ (string_of_instruction i)))
-    instrs;
+let print_instrs name instrs =
+  print_endline (name ^ ":");
+  List.iter (fun i -> print_endline ("\t" ^ (string_of_instruction i))) instrs;
   print_endline "---"
 
 let load_file name =
@@ -26,7 +25,6 @@ let load_file name =
 
 let compile global_context tree =
   let shred = compile global_context tree in
-  if !arg_print_instrs then print_instrs (shred_instructions shred);
   shred
 
 let main () =
@@ -34,7 +32,12 @@ let main () =
   try
     if List.length !filenames = 0 then
       (prerr_endline "[luck]: no input files... (try --help)"; exit 1);
-    let vm = List.fold_left (fun vm n -> VM.add vm (compile (VM.global_context vm) (load_file n))) VM.fresh !filenames in
+    let vm = List.fold_left
+      (fun vm n -> let shred = compile (VM.global_context vm) (load_file n) in
+                   if !arg_print_instrs then print_instrs n (shred_instructions shred);
+                   VM.add vm shred)
+      VM.fresh !filenames
+    in
     let rec run vm =
       let vm = VM.run !window_size vm in
       if VM.running vm then run vm else ()

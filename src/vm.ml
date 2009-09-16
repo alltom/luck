@@ -30,7 +30,7 @@ module VM =
     type vm = time * Shred.shred Priority_queue.queue (* now, shreds *)
     let fresh = (0.0, Priority_queue.empty)
     let add (now, q) (cntxt, funcs, instrs) =
-      let shred = Shred.shred now (Frame (TopLevelFrame, instrs, [], [(inst_context cntxt) :: [(* TODO: global VM env *)]], NilFrame)) in
+      let shred = Shred.shred now (Frame (TopLevelFrame, instrs, [], (inst_context cntxt) :: [(* TODO: global VM env *)], NilFrame)) in
       (now, Priority_queue.insert q now shred)
     let re_add (now, q) shred = (now, Priority_queue.insert q (Shred.now shred) shred)
     let global_context vm = Context.empty

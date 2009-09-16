@@ -74,9 +74,8 @@ type frame_type =
 | FunCallFrame of typ
 | WhileFrame of instruction list (* body of loop *)
 | RepeatFrame of int * instruction list
-type env_stack = (Env.environment list) list
 type stack = data list
-type frame = Frame of frame_type * instruction list * stack * env_stack * frame | NilFrame
+type frame = Frame of frame_type * instruction list * stack * Env.environment list * frame | NilFrame
 
 (* STRING CONVERSIONS *)
 
@@ -174,14 +173,6 @@ let pop_dur stck =
 let npop n stck =
   nfold (fun (popped, stck) -> let (d, stck') = pop stck in (d :: popped, stck')) ([], stck) n
 
-let push_env env = function
-  envs :: rest -> (env :: envs) :: rest
-| [] -> [[env]]
-
-let first_env_list = function
-  envs :: rest -> envs
-| [] -> error "expected an environment"
-
 (* EXECUTION *)
 
 let finished = function ([], [], _) -> true | _ -> false
@@ -240,6 +231,9 @@ let exec frame = match frame with
 | Frame (_, [], _, _, _) ->
   NilFrame
 
+| Frame(typ, (IPushEnv cntxt) :: instrs, stack, envs, parent) ->
+  Frame(typ, instrs, stack, (inst_context cntxt) :: envs, parent)
+
 | Frame(typ, (IPush d) :: instrs, stack, envs, parent) ->
   Frame(typ, instrs, d :: stack, envs, parent)
 
@@ -247,11 +241,11 @@ let exec frame = match frame with
   Frame(typ, instrs, (print count stack), envs, parent)
 
 | Frame(typ, (IPushVar v) :: instrs, stack, envs, parent) ->
-  Frame(typ, instrs, !(find_mem (first_env_list envs) v) :: stack, envs, parent)
+  Frame(typ, instrs, !(find_mem envs v) :: stack, envs, parent)
 
 | Frame(typ, (IAssign var) :: instrs, stack, envs, parent) ->
   let (v, stack) = pop stack in
-  (find_mem (first_env_list envs) var) := v;
+  (find_mem envs var) := v;
   Frame(typ, instrs, v :: stack, envs, parent)
 
 | Frame(typ, IDiscard :: instrs, _ :: stack, envs, parent) ->
@@ -306,7 +300,6 @@ let exec frame = match frame with
       (match t, v with
          BoolType, IntData i -> (frms, push (BoolData (i != 0)) stck, envs)
        | _ -> error ("cannot convert " ^ (string_of_type (type_of_data v)) ^ " to " ^ (string_of_type t)))
-  | IAdd | ISubtract | IMultiply | IDivide | ILessThan | IGreaterThan -> (frms, exec_binop instr stck, envs)
   | IPreInc v | IPostInc v | IPreDec v | IPostDec v ->
       let slot = (find_mem (first_env_list envs) v) in
       (match !slot with

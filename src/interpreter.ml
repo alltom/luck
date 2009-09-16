@@ -47,10 +47,14 @@ type instruction =
 (* return type * argument types * instructions *)
 type func = typ * typ list * instruction list
 
+(* map from string names to functions *)
+module FunMap = Map.Make(String)
+type funmap = func FunMap.t
+
 (* TODO *)
 type clas = unit
 
-type shred_template = context * func list * instruction list
+type shred_template = context * funmap * instruction list
 type function_template = typ list * instruction list
 type class_template = instruction list * function_template list * context
 

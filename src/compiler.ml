@@ -320,7 +320,11 @@ let compile_function cntxt (Function(ret_type, name, decls, stmts)) =
   (typ_of_asttype ret_type, arg_types, instrs)
 
 let compile_functions cntxt fns =
-  List.fold_left (fun compiled_fns fn -> (compile_function cntxt fn) :: compiled_fns) [] fns
+  List.fold_left
+    (fun compiled_fns fn -> let (Function(_, name, _, _)) = fn in
+                            FunMap.add name (compile_function cntxt fn) compiled_fns)
+    FunMap.empty
+    fns
 
 (* returns a tuple: context * functions * instructions *)
 let compile cntxt (fns, classes, stmts) : shred_template =

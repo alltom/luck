@@ -120,7 +120,7 @@ let rec string_of_instruction = function
 | IDiscard -> "discard"
 | IPushVar v -> "push var " ^ v
 | IAssign s -> "assign " ^ s
-| IBranch (f1, f2) -> "if (" ^ (String.concat "; " (List.map string_of_instruction f1)) ^ ") (" ^ (String.concat "; " (List.map string_of_instruction f2)) ^ ")"
+| IBranch (f1, f2) -> "if (" ^ (String.concat "; " (List.map string_of_instruction f1)) ^ ") else (" ^ (String.concat "; " (List.map string_of_instruction f2)) ^ ")"
 | IWhile body -> "while (...) { " ^ (String.concat "; " (List.map string_of_instruction body)) ^ " }"
 | IRepeat body -> "repeat (...) { " ^ (String.concat "; " (List.map string_of_instruction body)) ^ " }"
 | IBreak -> "break"

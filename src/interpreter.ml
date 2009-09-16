@@ -282,6 +282,9 @@ let exec frame = match frame with
 | Frame(typ, IBreak :: instrs, stack, envs, parent) ->
   parent
 
+| Frame(typ, IYield :: instrs, stack, envs, parent) ->
+  error "run_til_yield passed IYield to exec"
+
 | Frame (typ, instr :: instrs, stack, envs, parent) ->
   print_endline ("ending on unknown instruction: " ^ (string_of_instruction instr));
   NilFrame
@@ -317,7 +320,7 @@ let exec frame = match frame with
               | _ -> error "cannot happen")
            in slot := IntData newval; (frms, (IntData retval) :: stck, envs)
        | _ -> error ("incr/decr applied to invalid data type, " ^ (string_of_type (type_of_data !slot))))
-  | IYield -> error "run_til_yield passed IYield to exec" *)
+*)
 
 (* executes instructions in the given environments until it yields or finishes *)
 (* returns the number of samples yielded and the new execution state *)

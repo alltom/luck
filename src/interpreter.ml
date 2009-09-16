@@ -272,6 +272,13 @@ let exec frame = match frame with
 | Frame(typ, (IGreaterThan as op) :: instrs, stack, envs, parent) ->
   Frame(typ, instrs, exec_binop op stack, envs, parent)
 
+| Frame(typ, (IBranch (f1, f2)) :: instrs, stack, envs, parent) ->
+    let (cond, stack) = pop_bool stack in
+    if cond then
+      Frame(typ, f1 @ instrs, stack, envs, parent)
+    else
+      Frame(typ, f2 @ instrs, stack, envs, parent)
+
 | Frame(typ, (IRepeat body_instrs) :: instrs, stack, envs, parent) ->
     let (times, stack) = pop_int stack in
     if times > 0 then

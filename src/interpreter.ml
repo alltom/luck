@@ -236,16 +236,40 @@ let exec_binop instr stck =
 
 (* executes a single instruction *)
 let exec frame = match frame with
-  NilFrame ->
+  NilFrame
+| Frame (_, [], _, _, _) ->
   NilFrame
 
-| Frame (typ, (IPush d) :: instrs, stack, envs, parent) ->
-  Frame (typ, instrs, d :: stack, envs, parent)
+| Frame(typ, (IPush d) :: instrs, stack, envs, parent) ->
+  Frame(typ, instrs, d :: stack, envs, parent)
 
-| Frame (typ, (IPrint count) :: instrs, stack, envs, parent) ->
+| Frame(typ, (IPrint count) :: instrs, stack, envs, parent) ->
   Frame(typ, instrs, (print count stack), envs, parent)
 
-| Frame (typ, instrs, stack, envs, parent) -> NilFrame
+| Frame(typ, (IPushVar v) :: instrs, stack, envs, parent) ->
+  Frame(typ, instrs, !(find_mem (first_env_list envs) v) :: stack, envs, parent)
+
+| Frame(typ, (IAssign var) :: instrs, stack, envs, parent) ->
+  let (v, stack) = pop stack in
+  (find_mem (first_env_list envs) var) := v;
+  Frame(typ, instrs, v :: stack, envs, parent)
+
+| Frame(typ, IDiscard :: instrs, _ :: stack, envs, parent) ->
+  Frame(typ, instrs, stack, envs, parent)
+| Frame(typ, IDiscard :: instrs, [], envs, parent) ->
+  error "stack underflow"
+
+| Frame(typ, (IAdd as op) :: instrs, stack, envs, parent)
+| Frame(typ, (ISubtract as op) :: instrs, stack, envs, parent)
+| Frame(typ, (IMultiply as op) :: instrs, stack, envs, parent)
+| Frame(typ, (IDivide as op) :: instrs, stack, envs, parent)
+| Frame(typ, (ILessThan as op) :: instrs, stack, envs, parent)
+| Frame(typ, (IGreaterThan as op) :: instrs, stack, envs, parent) ->
+  Frame(typ, instrs, exec_binop op stack, envs, parent)
+
+| Frame (typ, instr :: instrs, stack, envs, parent) ->
+  print_endline ("ending on unknown instruction: " ^ (string_of_instruction instr));
+  NilFrame
 
 (* instr (frms : frame list) (stck : stack) (envs : env_stack) =
   match instr with
@@ -254,10 +278,7 @@ let exec frame = match frame with
       (match envs with
          (_ :: envs) :: rest -> (frms, stck, envs :: rest)
        | _ -> error "cannot pop environment")
-  | IPush d -> (frms, d :: stck, envs)
   | IPushVar var -> (frms, !(find_mem (first_env_list envs) var) :: stck, envs)
-  | IDiscard -> let (v, stck) = pop stck in (frms, stck, envs)
-  | IAssign var -> let (v, stck) = pop stck in (find_mem (first_env_list envs) var) := v; (frms, v :: stck, envs)
   | IBranch (f1, f2) ->
       let (cond, stck) = pop_bool stck in
       (match frms with
@@ -280,7 +301,6 @@ let exec frame = match frame with
          ((WhileFrame _, _) :: frms, _ :: envs) -> (frms, stck, envs)
        | (_ :: frms, _ :: envs) -> error "cannot break out of a non-loop frame"
        | _ -> error "missing a frame or environment to pop")
-  | IPrint count -> (frms, (print count stck), envs)
   | ICast t ->
       let (v, stck) = pop stck in
       (match t, v with

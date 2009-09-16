@@ -189,6 +189,12 @@ let rec find_mem envs var =
     env :: rest -> (try Env.find_mem var env with Not_found -> find_mem rest var)
   | [] -> error ("variable " ^ var ^ " does not exist")
 
+(* searches built-ins and the given environment stack for a variable *)
+let rec find_var envs var =
+  match var with
+    "samp" -> ref (DurData 1.)
+  | _ -> find_mem envs var
+
 (* instantiates an environment with variables from a context *)
 let inst_context cntxt =
   let inst_type name = function
@@ -234,6 +240,11 @@ let exec frame = match frame with
 | Frame(typ, (IPushEnv cntxt) :: instrs, stack, envs, parent) ->
   Frame(typ, instrs, stack, (inst_context cntxt) :: envs, parent)
 
+| Frame(typ, IPopEnv :: instrs, stack, _ :: envs, parent) ->
+  Frame(typ, instrs, stack, envs, parent)
+| Frame(typ, IPopEnv :: instrs, stack, [], parent) ->
+  error "env underflow"
+
 | Frame(typ, (IPush d) :: instrs, stack, envs, parent) ->
   Frame(typ, instrs, d :: stack, envs, parent)
 
@@ -241,11 +252,11 @@ let exec frame = match frame with
   Frame(typ, instrs, (print count stack), envs, parent)
 
 | Frame(typ, (IPushVar v) :: instrs, stack, envs, parent) ->
-  Frame(typ, instrs, !(find_mem envs v) :: stack, envs, parent)
+  Frame(typ, instrs, !(find_var envs v) :: stack, envs, parent)
 
 | Frame(typ, (IAssign var) :: instrs, stack, envs, parent) ->
   let (v, stack) = pop stack in
-  (find_mem envs var) := v;
+  (find_var envs var) := v;
   Frame(typ, instrs, v :: stack, envs, parent)
 
 | Frame(typ, IDiscard :: instrs, _ :: stack, envs, parent) ->
@@ -261,18 +272,20 @@ let exec frame = match frame with
 | Frame(typ, (IGreaterThan as op) :: instrs, stack, envs, parent) ->
   Frame(typ, instrs, exec_binop op stack, envs, parent)
 
+| Frame(typ, (IRepeat body_instrs) :: instrs, stack, envs, parent) ->
+    let (times, stack) = pop_int stack in
+    if times > 0 then
+      Frame(RepeatFrame (times - 1, body_instrs), body_instrs, stack, envs, Frame(typ, instrs, stack, envs, parent))
+    else
+      Frame(typ, instrs, stack, envs, parent)
+
+
 | Frame (typ, instr :: instrs, stack, envs, parent) ->
   print_endline ("ending on unknown instruction: " ^ (string_of_instruction instr));
   NilFrame
 
 (* instr (frms : frame list) (stck : stack) (envs : env_stack) =
   match instr with
-    IPushEnv cntxt -> (frms, stck, push_env (inst_context cntxt) envs)
-  | IPopEnv ->
-      (match envs with
-         (_ :: envs) :: rest -> (frms, stck, envs :: rest)
-       | _ -> error "cannot pop environment")
-  | IPushVar var -> (frms, !(find_mem (first_env_list envs) var) :: stck, envs)
   | IBranch (f1, f2) ->
       let (cond, stck) = pop_bool stck in
       (match frms with
@@ -341,4 +354,4 @@ let rec run_til_yield frame =
       else
         run_til_yield parent
   | Frame (typ, instrs, stack, envs, parent) ->
-      run_til_yield (exec (Frame (typ, instrs, stack, envs, parent)))
+      run_til_yield (exec frame)

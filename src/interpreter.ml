@@ -279,6 +279,13 @@ let exec frame = match frame with
     else
       Frame(typ, f2 @ instrs, stack, envs, parent)
 
+| Frame(typ, (IWhile body_instrs) :: instrs, stack, envs, parent) ->
+    let (cond, stack) = pop_bool stack in
+    if cond then
+      Frame(WhileFrame body_instrs, body_instrs, stack, envs, Frame(typ, instrs, stack, envs, parent))
+    else
+      Frame(typ, instrs, stack, envs, parent)
+
 | Frame(typ, (IRepeat body_instrs) :: instrs, stack, envs, parent) ->
     let (times, stack) = pop_int stack in
     if times > 0 then
@@ -298,17 +305,6 @@ let exec frame = match frame with
 
 (* instr (frms : frame list) (stck : stack) (envs : env_stack) =
   match instr with
-  | IBranch (f1, f2) ->
-      let (cond, stck) = pop_bool stck in
-      (match frms with
-         (ft, instrs) :: frms -> ((ft, (if cond then f1 else f2) @ instrs) :: frms, stck, envs)
-       | _ -> error "in branch, expecting a frame")
-  | IWhile body_frame ->
-      let (cond, stck) = pop_bool stck in
-      if cond then
-        ((WhileFrame body_frame, body_frame) :: frms, stck, envs)
-      else
-        (frms, stck, envs)
   | ICast t ->
       let (v, stck) = pop stck in
       (match t, v with

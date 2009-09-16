@@ -279,6 +279,8 @@ let exec frame = match frame with
     else
       Frame(typ, instrs, stack, envs, parent)
 
+| Frame(typ, IBreak :: instrs, stack, envs, parent) ->
+  parent
 
 | Frame (typ, instr :: instrs, stack, envs, parent) ->
   print_endline ("ending on unknown instruction: " ^ (string_of_instruction instr));
@@ -297,17 +299,6 @@ let exec frame = match frame with
         ((WhileFrame body_frame, body_frame) :: frms, stck, envs)
       else
         (frms, stck, envs)
-  | IRepeat body_frame ->
-      let (times, stck) = pop_int stck in
-      if times > 0 then
-        ((RepeatFrame (times - 1, body_frame), body_frame) :: frms, stck, envs)
-      else
-        (frms, stck, envs)
-  | IBreak ->
-      (match (frms, envs) with
-         ((WhileFrame _, _) :: frms, _ :: envs) -> (frms, stck, envs)
-       | (_ :: frms, _ :: envs) -> error "cannot break out of a non-loop frame"
-       | _ -> error "missing a frame or environment to pop")
   | ICast t ->
       let (v, stck) = pop stck in
       (match t, v with

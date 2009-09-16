@@ -272,6 +272,25 @@ let exec frame = match frame with
 | Frame(typ, (IGreaterThan as op) :: instrs, stack, envs, parent) ->
   Frame(typ, instrs, exec_binop op stack, envs, parent)
 
+| Frame(typ, (IPreInc v as op) :: instrs, stack, envs, parent)
+| Frame(typ, (IPostInc v as op) :: instrs, stack, envs, parent)
+| Frame(typ, (IPreDec v as op) :: instrs, stack, envs, parent)
+| Frame(typ, (IPostDec v as op) :: instrs, stack, envs, parent) ->
+  let slot = (find_mem envs v) in
+  (match !slot with
+     IntData i ->
+       let newval, retval =
+         (match op with
+            IPreInc _ -> i+1, i+1
+          | IPostInc _ -> i+1, i
+          | IPreDec _ -> i-1, i-1
+          | IPostDec _ -> i-1, i
+          | _ -> error "cannot happen")
+       in
+       slot := IntData newval;
+       Frame(typ, instrs, (IntData retval) :: stack, envs, parent)
+   | _ -> error ("incr/decr applied to invalid data type, " ^ (string_of_type (type_of_data !slot))))
+
 | Frame(typ, (ICast t) :: instrs, v :: stack, envs, parent) ->
   (match t, v with
      BoolType, IntData i -> Frame(typ, instrs, (BoolData (i != 0)) :: stack, envs, parent)
@@ -311,23 +330,6 @@ let exec frame = match frame with
 | Frame (typ, instr :: instrs, stack, envs, parent) ->
   print_endline ("ending on unknown instruction: " ^ (string_of_instruction instr));
   NilFrame
-
-(* instr (frms : frame list) (stck : stack) (envs : env_stack) =
-  match instr with
-  | IPreInc v | IPostInc v | IPreDec v | IPostDec v ->
-      let slot = (find_mem (first_env_list envs) v) in
-      (match !slot with
-         IntData i ->
-           let newval, retval =
-             (match instr with
-                IPreInc _ -> i+1, i+1
-              | IPostInc _ -> i+1, i
-              | IPreDec _ -> i-1, i-1
-              | IPostDec _ -> i-1, i
-              | _ -> error "cannot happen")
-           in slot := IntData newval; (frms, (IntData retval) :: stck, envs)
-       | _ -> error ("incr/decr applied to invalid data type, " ^ (string_of_type (type_of_data !slot))))
-*)
 
 (* executes instructions in the given environments until it yields or finishes *)
 (* returns the number of samples yielded and the new execution state *)

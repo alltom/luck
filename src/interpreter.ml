@@ -272,6 +272,11 @@ let exec frame = match frame with
 | Frame(typ, (IGreaterThan as op) :: instrs, stack, envs, parent) ->
   Frame(typ, instrs, exec_binop op stack, envs, parent)
 
+| Frame(typ, (ICast t) :: instrs, v :: stack, envs, parent) ->
+  (match t, v with
+     BoolType, IntData i -> Frame(typ, instrs, (BoolData (i != 0)) :: stack, envs, parent)
+   | _ -> error ("cannot convert " ^ (string_of_type (type_of_data v)) ^ " to " ^ (string_of_type t)))
+
 | Frame(typ, (IBranch (f1, f2)) :: instrs, stack, envs, parent) ->
     let (cond, stack) = pop_bool stack in
     if cond then
@@ -296,20 +301,19 @@ let exec frame = match frame with
 | Frame(typ, IBreak :: instrs, stack, envs, parent) ->
   parent
 
+(* BEGIN: error cases *)
+
+(* IYield should be caught in run_til_yield, but one got through *)
 | Frame(typ, IYield :: instrs, stack, envs, parent) ->
   error "run_til_yield passed IYield to exec"
 
+(* an unknown instruction was encountered *)
 | Frame (typ, instr :: instrs, stack, envs, parent) ->
   print_endline ("ending on unknown instruction: " ^ (string_of_instruction instr));
   NilFrame
 
 (* instr (frms : frame list) (stck : stack) (envs : env_stack) =
   match instr with
-  | ICast t ->
-      let (v, stck) = pop stck in
-      (match t, v with
-         BoolType, IntData i -> (frms, push (BoolData (i != 0)) stck, envs)
-       | _ -> error ("cannot convert " ^ (string_of_type (type_of_data v)) ^ " to " ^ (string_of_type t)))
   | IPreInc v | IPostInc v | IPreDec v | IPostDec v ->
       let slot = (find_mem (first_env_list envs) v) in
       (match !slot with

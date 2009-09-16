@@ -1,4 +1,4 @@
-while(false)
+while(0)
     <<< "don't print" >>>;
 
 while(int i < 2) {
